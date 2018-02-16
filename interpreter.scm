@@ -1,5 +1,8 @@
 (require "simpleParser.scm")
 
+; TODO: Update the assignment function to be able to assign the value of an expression to a variable
+
+
 ; defining a function for variable declaration
 (define varDeclaration
   (lambda (dec state)
