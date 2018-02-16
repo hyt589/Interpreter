@@ -2,10 +2,10 @@
 
 ; defining a function for variable declaration
 (define varDeclaration
-  (lambda (dec)
+  (lambda (dec state)
     (cond
       ((null? (cddr dec)) (cdr dec))
-      (else (cdr dec)))))
+      (else (cons (cadr dec) (evaluate (caddr dec) state))))))
 
 ;defining a function that returns the value of an expression
 (define evaluate
