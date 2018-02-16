@@ -13,10 +13,10 @@
     (cond
       ((number? exp) exp)
       ((symbol? exp) (lookupvar exp state))
-      ((eq? (car exp) '+) (+ (evaluate (cadr exp)) (evaluate (caddr exp))))
-      ((eq? (car exp) '-) (- (evaluate (cadr exp)) (evaluate (caddr exp))))
-      ((eq? (car exp) '*) (* (evaluate (cadr exp)) (evaluate (caddr exp))))
-      ((eq? (car exp) '/) (/ (evaluate (cadr exp)) (evaluate (caddr exp))))
+      ((eq? (car exp) '+) (+ (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
+      ((eq? (car exp) '-) (- (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
+      ((eq? (car exp) '*) (* (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
+      ((eq? (car exp) '/) (/ (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
       (else (error "unknown operator")))))
 
 ; defining a function for assignment
