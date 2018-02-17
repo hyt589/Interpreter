@@ -45,7 +45,7 @@
   (lambda (stmt state)
     (cond
       ((null? (cadr stmt)) (error "Nothing to return"))
-      (else (evaluate (cadr stmt) state)))))
+      (else (append state (list (cons 'return (evaluate (cadr stmt) state))))))))
 
 
 ; defining a function that returns a boolean based on the input statement
@@ -64,6 +64,27 @@
       ((eq? (car stmt) '!) (not (M_bool (cadr stmt) state)))
       (else (error "Invalid conditional statement!")))))
 
+; defining a function that returns a state after an if statement
+(define ifstmt
+  (lambda (stmt state)
+    (cond
+      ((M_bool (cadr ifstmt) state) (M_state (caddr ifstmt) state))
+      (else (M_state (cadddr ifstmt) state)))))
+
+; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
+(define run
+  (lambda (stmtlis state)
+    (cond
+      ((null? stmtlis) state)
+      ((null? (cdr stmtlis)) (M_state (car stmtlis) state))
+      (else (run (cdr stmtlis) (M_state (car stmtlis) state))))))
+
+;defining a function that returns a state after a while statement
+(define while
+  (lambda (stmt state)
+    (cond
+      ((M_bool (cadr stmt) state) (while stmt (run (cddr stmt) state)))
+      (else state))))
 
 
 ;defining a function that returns a state after a statement
@@ -74,4 +95,6 @@
       ((eq? (car stmt) 'var) (varDeclaration stmt state))
       ((eq? (car stmt) '=) (assignment stmt state))
       ((eq? (car stmt) 'return) (return stmt state))
-      ((eq? (car stmt) 'if) ))))
+      ((eq? (car stmt) 'if) (ifstmt stmt state))
+      ((eq? (car stmt) 'while) (while stmt state))
+      (else (error "Invalid statements")))))
