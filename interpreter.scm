@@ -2,7 +2,7 @@
 
 
 
-; defining a function for variable declaration
+; defining a function for variable declaration so that it returns the state after the declaration statement
 (define varDeclaration
   (lambda (dec state)
     (cond
@@ -39,3 +39,10 @@
       ((eq? var (caar state)) (cadar state))
       ((null? (cdr state)) (error "Variable not declared!"))
       (else (lookupvar var (cdr state))))))
+
+; defining a function for the return statement that returns the value of the expression being returned
+(define return
+  (lambda (stmt state)
+    (cond
+      ((null? (cadr stmt)) (error "Nothing to return"))
+      (else (evaluate (cadr stmt) state)))))
