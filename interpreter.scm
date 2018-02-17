@@ -1,5 +1,8 @@
 (require "simpleParser.scm")
 
+; Todo: 1. Implement abstraction on state
+;       2. Fix the problem where the program returns a fraction instead of an int in test2
+
 ; definign a function that takes an input file to be executed and returns a value
 (define interpret
   (lambda (filename)
