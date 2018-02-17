@@ -1,13 +1,18 @@
 (require "simpleParser.scm")
 
-
+; definign a function that takes an input file to be executed and returns a value
+(define interpret
+  (lambda (filename)
+    (cond
+      ((not (string? filename)) (error "File name must be a string!"))
+      (else (lookupvar 'return (run (parser filename) '()))))))
 
 ; defining a function for variable declaration so that it returns the state after the declaration statement
 (define varDeclaration
   (lambda (dec state)
     (cond
-      ((null? (cddr dec)) (list (cons (cadr dec) (evaluate (caddr dec) state))))
-      (else (append (list (cons (cadr dec) (evaluate (caddr dec) state))) (state))))))
+      ((null? (cddr dec)) (append (list (cdr dec)) state))
+      (else (append (list (cons (cadr dec) (evaluate (caddr dec) state))) state)))))
 
 ;defining a function that returns the value of an expression
 (define evaluate
@@ -19,6 +24,7 @@
       ((eq? (car exp) '-) (- (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
       ((eq? (car exp) '*) (* (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
       ((eq? (car exp) '/) (/ (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
+      ((eq? (car exp) '%) (modulo (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
       (else (error "unknown operator")))))
 
 ; defining a function for assignment so that it returns a state after the assignment
