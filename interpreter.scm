@@ -26,8 +26,8 @@
 (define assignment
   (lambda (asg state)
     (cond
-      ((null? state) (cdr asg))
-      ((eq? (caar state) (cadr asg)) (append (list (cdr asg)) (cdr state)))
+      ((null? state) (error "Variable not declared yet"))
+      ((eq? (caar state) (cadr asg)) (append (list (cons (cadr asg) (evaluate (caddr asg) state))) (cdr state)))
       ((not (null? (cdr state))) (append (list(car state)) (assignment asg (cdr state))))
       (else (error "Variable not declared yet!")))))
 
