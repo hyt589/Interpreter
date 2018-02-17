@@ -1,14 +1,13 @@
 (require "simpleParser.scm")
 
-; TODO: Update the assignment function to be able to assign the value of an expression to a variable
 
 
 ; defining a function for variable declaration
 (define varDeclaration
   (lambda (dec state)
     (cond
-      ((null? (cddr dec)) (cdr dec))
-      (else (cons (cadr dec) (evaluate (caddr dec) state))))))
+      ((null? (cddr dec)) (list (cons (cadr dec) (evaluate (caddr dec) state))))
+      (else (append (list (cons (cadr dec) (evaluate (caddr dec) state))) (state))))))
 
 ;defining a function that returns the value of an expression
 (define evaluate
@@ -22,7 +21,7 @@
       ((eq? (car exp) '/) (/ (evaluate (cadr exp) state) (evaluate (caddr exp) state)))
       (else (error "unknown operator")))))
 
-; defining a function for assignment
+; defining a function for assignment so that it returns a state after the assignment
 (define assignment
   (lambda (asg state)
     (cond
