@@ -59,8 +59,19 @@
       ((eq? (car stmt) '>=) (>= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
       ((eq? (car stmt) '<=) (<= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
       ((eq? (car stmt) '!=) (not (= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state))))
+      ((eq? (car stmt) '&&) (and (M_bool (cadr stmt) state) (M_bool (caddr stmt) state)))
+      ((eq? (car stmt) '||) (or (M_bool (cadr stmt) state) (M_bool (caddr stmt) state)))
+      ((eq? (car stmt) '!) (not (M_bool (cadr stmt) state)))
       (else (error "Invalid conditional statement!")))))
 
 
 
-
+;defining a function that returns a state after a statement
+(define M_state
+  (lambda (stmt state)
+    (cond
+      ((null? stmt) state)
+      ((eq? (car stmt) 'var) (varDeclaration stmt state))
+      ((eq? (car stmt) '=) (assignment stmt state))
+      ((eq? (car stmt) 'return) (return stmt state))
+      ((eq? (car stmt) 'if) ))))
