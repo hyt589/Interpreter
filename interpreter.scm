@@ -90,6 +90,7 @@
   (lambda (stmt state)
     (cond
       ((M_bool (cadr stmt) state) (M_state (caddr stmt) state))
+      ((null? (cdddr stmt)) state)
       (else (M_state (cadddr stmt) state)))))
 
 ; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
