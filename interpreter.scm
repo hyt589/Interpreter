@@ -36,7 +36,7 @@
     (cond
       ((null? state) (error "Variable not declared!"))
       ((and (eq? var (caar state)) (null? (cdar state))) (error "Variable not initialized!"))
-      ((eq? var (caar state)) (cadar state))
+      ((eq? var (caar state)) (cdar state))
       ((null? (cdr state)) (error "Variable not declared!"))
       (else (lookupvar var (cdr state))))))
 
@@ -46,3 +46,21 @@
     (cond
       ((null? (cadr stmt)) (error "Nothing to return"))
       (else (evaluate (cadr stmt) state)))))
+
+
+; defining a function that returns a boolean based on the input statement
+(define M_bool
+  (lambda (stmt state)
+    (cond
+      ((null? stmt) (error "Conditional statement needed!"))
+      ((eq? (car stmt) '==) (= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
+      ((eq? (car stmt) '<) (< (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
+      ((eq? (car stmt) '>) (> (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
+      ((eq? (car stmt) '>=) (>= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
+      ((eq? (car stmt) '<=) (<= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state)))
+      ((eq? (car stmt) '!=) (not (= (evaluate (cadr stmt) state) (evaluate (caddr stmt) state))))
+      (else (error "Invalid conditional statement!")))))
+
+
+
+
