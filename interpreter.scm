@@ -8,14 +8,14 @@
   (lambda (filename)
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
-      (else (lookupvar 'M_state_return (run (parser filename) '()))))))
+      (else (lookupvar 'M_state_return (run (parser filename) (M_state_nullState)))))))
 
 ; defining a function for variable declaration so that it returns the state after the declaration statement
 (define M_state_declaration
   (lambda (dec state)
     (cond
-      ((null? (cddr dec)) (append (list (cdr dec)) state))
-      (else (append (list (cons (cadr dec) (M_value (caddr dec) state))) state)))))
+      ((null? (cddr dec)) (M_state_Declaration_updateBinding (cdr dec) state))
+      (else (M_state_Declaration_updateBinding (cons (cadr dec) (M_value (caddr dec) state)) state)))))
 
 ;defining a function that returns the value of an expression
 (define M_value
@@ -127,15 +127,26 @@
 ;--------------------------------------------------------------------------------
 ; the following are functions written to hide state implementation from the rest of interpreter
 
-; defining a funtion that updates the bindings in a given state
-(define M_state_updateBinding
+; defining a function that updates the bindings in a given state in a delaration statement
+(define M_state_Declaration_updateBinding
   (lambda (binding state)
     (cond
       ((null? state) (list binding))
+      ((eq? (car binding) (caar state)) (error "Variable already declared"))
+      ((not (null? (cdr state))) (append (list (car state)) (M_state_Declaration_updateBinding binding (cdr state))))
+      (else (append state (list binding))))))
+
+;defining a function that updates the bindings in a given state in a assignment statement
+(define M_state_Assignment_updateBinding
+  (lambda (binding state)
+    (cond
+      ((null? state) (error "Variable not declared"))
       ((eq? (car binding) (caar state)) (append (list binding) (cdr state)))
-      ((not (null? (cdr state))) (append (car state) (M_state_updateBinding binding (cdr state))))
-      (else (append (list binding) state)))))
+      ((not (null? (cdr state))) (append (list (car state)) (M_state_Assignment_updateBinding binding (cdr state))))
+      (else (error "Variable not declared")))))
 
-
+; defininf a function that takes no input and returns an empty state
+(define M_state_nullState
+  (lambda () '()))
 
 
