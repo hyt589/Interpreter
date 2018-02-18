@@ -29,7 +29,7 @@
       ((eq? (car exp) '+) (+ (M_value (cadr exp) state) (M_value (caddr exp) state)))
       ((eq? (car exp) '-) (- (M_value (cadr exp) state) (M_value (caddr exp) state)))
       ((eq? (car exp) '*) (* (M_value (cadr exp) state) (M_value (caddr exp) state)))
-      ((eq? (car exp) '/) (/ (M_value (cadr exp) state) (M_value (caddr exp) state)))
+      ((eq? (car exp) '/) (quotient (M_value (cadr exp) state) (M_value (caddr exp) state)))
       ((eq? (car exp) '%) (modulo (M_value (cadr exp) state) (M_value (caddr exp) state)))
       ((or (eq? (car exp) '==)
            (or (eq? (car exp) '<)
@@ -123,3 +123,19 @@
       ((eq? (car stmt) 'if) (M_state_if stmt state))
       ((eq? (car stmt) 'while) (M_state_while stmt state))
       (else (error "Invalid statements")))))
+
+;--------------------------------------------------------------------------------
+; the following are functions written to hide state implementation from the rest of interpreter
+
+; defining a funtion that updates the bindings in a given state
+(define M_state_updateBinding
+  (lambda (binding state)
+    (cond
+      ((null? state) (list binding))
+      ((eq? (car binding) (caar state)) (append (list binding) (cdr state)))
+      ((not (null? (cdr state))) (append (car state) (M_state_updateBinding binding (cdr state))))
+      (else (append (list binding) state)))))
+
+
+
+
