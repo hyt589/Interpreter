@@ -104,7 +104,7 @@
       ((null? (cdr stmtlis)) (M_state (car stmtlis) state))
       (else (run (cdr stmtlis) (M_state (car stmtlis) state))))))
 
-;defining a function that returns a state after a while statement
+; defining a function that returns a state after a while statement
 (define M_state_while
   (lambda (stmt state)
     (cond
@@ -112,7 +112,7 @@
       (else state))))
 
 
-;defining a function that returns a state after a statement
+; defining a function that returns a state after a statement
 (define M_state
   (lambda (stmt state)
     (cond
@@ -136,7 +136,7 @@
       ((not (null? (cdr state))) (append (list (car state)) (M_state_Declaration_updateBinding binding (cdr state))))
       (else (append state (list binding))))))
 
-;defining a function that updates the bindings in a given state in a assignment statement
+; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding
   (lambda (binding state)
     (cond
