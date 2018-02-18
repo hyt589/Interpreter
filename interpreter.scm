@@ -1,5 +1,7 @@
 (require "simpleParser.scm")
 
+;--------------------------------------------------------------------------------------------------------
+;---------------------------Interpreter Implementation---------------------------------------------------
 
 ; definign a function that takes an input file to be executed and returns a value
 (define interpret
@@ -108,6 +110,7 @@
       ((eq? (car stmt) 'while) (M_state_while stmt state))
       (else (error "Invalid statements")))))
 
+;----------------------------------------------------------------------------------------------------
 ;------------------------------------State Implementation--------------------------------------------
 ; the following are functions written to hide state implementation from the rest of interpreter
 
