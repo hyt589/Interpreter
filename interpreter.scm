@@ -45,16 +45,6 @@
   (lambda (asg state)
     (M_state_Assignment_updateBinding (cons (cadr asg) (M_value (caddr asg) state)) state)))
 
-; defining a function that returns a value of a variable if initialized or an error message if not
-(define lookupvar
-  (lambda (var state)
-    (cond
-      ((null? state) (error "Variable not declared!"))
-      ((and (eq? var (caar state)) (null? (cdar state))) (error "Variable not initialized!"))
-      ((eq? var (caar state)) (cdar state))
-      ((null? (cdr state)) (error "Variable not declared!"))
-      (else (lookupvar var (cdr state))))))
-
 ; defining a function for the return statement that returns the value of the expression being returned
 (define M_state_return
   (lambda (stmt state)
@@ -118,7 +108,7 @@
       ((eq? (car stmt) 'while) (M_state_while stmt state))
       (else (error "Invalid statements")))))
 
-;--------------------------------------------------------------------------------
+;------------------------------------State Implementation--------------------------------------------
 ; the following are functions written to hide state implementation from the rest of interpreter
 
 ; defining a function that updates the bindings in a given state in a delaration statement
@@ -143,4 +133,13 @@
 (define M_state_nullState
   (lambda () '()))
 
+; defining a function that returns a value of a variable if initialized or an error message if not
+(define lookupvar
+  (lambda (var state)
+    (cond
+      ((null? state) (error "Variable not declared!"))
+      ((and (eq? var (caar state)) (null? (cdar state))) (error "Variable not initialized!"))
+      ((eq? var (caar state)) (cdar state))
+      ((null? (cdr state)) (error "Variable not declared!"))
+      (else (lookupvar var (cdr state))))))
 
