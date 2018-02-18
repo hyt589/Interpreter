@@ -114,6 +114,8 @@
 ;------------------------------------State Implementation--------------------------------------------
 ; the following are functions written to hide state implementation from the rest of interpreter
 
+; This implementation of the state is a simple list of pairs, each pair contains a variable name and its value
+
 ; defining a function that updates the bindings in a given state in a delaration statement
 (define M_state_Declaration_updateBinding
   (lambda (binding state)
