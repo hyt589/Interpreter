@@ -1,7 +1,5 @@
 (require "simpleParser.scm")
 
-; Todo: 1. Implement abstraction on state
-;       2. Fix the problem where the program returns a fraction instead of an int in test2
 
 ; definign a function that takes an input file to be executed and returns a value
 (define interpret
@@ -17,7 +15,7 @@
       ((null? (cddr dec)) (M_state_Declaration_updateBinding (cdr dec) state))
       (else (M_state_Declaration_updateBinding (cons (cadr dec) (M_value (caddr dec) state)) state)))))
 
-;defining a function that returns the value of an expression
+; defining a function that returns the value of an expression
 (define M_value
   (lambda (exp state)
     (cond
@@ -45,11 +43,7 @@
 ; defining a function for assignment so that it returns a state after the assignment
 (define M_state_assignment
   (lambda (asg state)
-    (cond
-      ((null? state) (error "Variable not declared yet"))
-      ((eq? (caar state) (cadr asg)) (append (list (cons (cadr asg) (M_value (caddr asg) state))) (cdr state)))
-      ((not (null? (cdr state))) (append (list(car state)) (M_state_assignment asg (cdr state))))
-      (else (error "Variable not declared yet!")))))
+    (M_state_Assignment_updateBinding (cons (cadr asg) (M_value (caddr asg) state)) state)))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
@@ -104,7 +98,7 @@
       ((null? (cdr stmtlis)) (M_state (car stmtlis) state))
       (else (run (cdr stmtlis) (M_state (car stmtlis) state))))))
 
-; defining a function that returns a state after a while statement
+;defining a function that returns a state after a while statement
 (define M_state_while
   (lambda (stmt state)
     (cond
@@ -112,7 +106,7 @@
       (else state))))
 
 
-; defining a function that returns a state after a statement
+;defining a function that returns a state after a statement
 (define M_state
   (lambda (stmt state)
     (cond
@@ -136,7 +130,7 @@
       ((not (null? (cdr state))) (append (list (car state)) (M_state_Declaration_updateBinding binding (cdr state))))
       (else (append state (list binding))))))
 
-; defining a function that updates the bindings in a given state in a assignment statement
+;defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding
   (lambda (binding state)
     (cond
