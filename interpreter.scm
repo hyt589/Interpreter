@@ -131,13 +131,16 @@
 ; This implementation of the state is a simple list of pairs, each pair contains a variable name and its value
 
 ; defining a function that updates the bindings in a given state in a delaration statement
-(define M_state_Declaration_updateBinding
-  (lambda (binding state)
-    (cond
-      ((null? state) (list binding))
-      ((eq? (car binding) (caar state)) (error "Variable already declared"))
-      ((not (null? (cdr state))) (append (list (car state)) (M_state_Declaration_updateBinding binding (cdr state))))
-      (else (append state (list binding))))))
+(define M_state_Declaration_updateBinding_helper
+  (lambda (binding state break)
+    (call/cc
+     (cond
+       ((and (null? (M_state_topLayer state)) (null? (M_state_previousLayers state))) (break (list (cons (car binding) (M_state_topLayer state)))))
+       ((and (null? (M_state_topLayer state)) (not (null? (M_state_previousLayers state)))) (M_state_Declaration_updateBinding_helper binding (M_state_previousLayers state) break))
+       ((eq? (car binding) (car (M_state_topLayer state))) (break (error "Variable already declared")))
+       (else (
+      
+
 
 ;defining a function that updates the bindings in a given state in a assignment statement
 ;need to update the first layer first
@@ -171,6 +174,11 @@
 (define M_state_topLayer
   (lambda (state)
     (car state)))
+
+; defining a function that returns the remaining layers of the current state
+(define M_state_previousLayers
+  (lambda (state)
+    (cdr state)))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
 ;need to first look up first layer(car list), then second layer ...
