@@ -49,7 +49,7 @@
 
 ; defining a function for the return statement that returns the value of the expression being returned
 (define M_state_return
-  (lambda (stmt state return)
+  (lambda (stmt state); return)
     (cond
       ((null? (cadr stmt)) (return (error "Nothing to M_state_return")))
       ;(else 'M_state_return_cps (M_value (cadr stmt) state)
@@ -142,9 +142,23 @@
       ((not (null? (cdr state))) (append (list (car state)) (M_state_Assignment_updateBinding binding (cdr state))))
       (else (error "Variable not declared")))))
 
-; defininf a function that takes no input and returns an empty state
+; defining a function that takes no input and returns an empty state
 (define M_state_nullState
   (lambda () '()))
+
+; defining a function that adds a layer to the bindings
+(define M_state_addLayer
+  (lambda (state)
+    (cond
+      ((null? state) M_state_nullState)
+      (else (list '() state)))))
+
+; defining a function that removes a layer from the bindings
+(define M_state_removeLayer
+  (lambda (state)
+    (cond
+      ((null? state) M_state_nullState)
+      (else (cdr state)))))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
 ;need to first look up first layer(car list), then second layer ...
