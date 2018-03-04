@@ -144,7 +144,7 @@
 
 ; defining a function that takes no input and returns an empty state
 (define M_state_nullState
-  (lambda () '()))
+  (lambda () '(())))
 
 ; defining a function that adds a layer to the bindings
 (define M_state_addLayer
