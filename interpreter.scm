@@ -144,7 +144,7 @@
 
 ; defininf a function that takes no input and returns an empty state
 (define M_state_nullState
-  (lambda () '()))
+  (lambda () '(())))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
 ;need to first look up first layer(car list), then second layer ...
