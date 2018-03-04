@@ -98,6 +98,13 @@
       ((M_bool (cadr stmt) state) (M_state_while stmt (run (cddr stmt) state)))
       (else state))))
 
+; defining a function that returns a state after a block
+(define M_state_block
+  (lambda (body state)
+    (cond
+      ((null? body) state)
+      (else (M_state_removeLayer (run body (M_state_addLayer state)))))))
+
 
 ;defining a function that returns a state after a statement
 (define M_state
