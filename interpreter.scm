@@ -119,7 +119,7 @@
       ;implement try
       ;implement catch
       ;implement finally
-      ;implement begin (block)
+      ((eq? (car stmt) 'begin) (M_state_block (cdr stmt) state))
          ;for each begin, cons a new list to the existing binding list
          ;if the begin ends, remove the (car list) of the current binding list
       (else (error "Invalid statements")))))
