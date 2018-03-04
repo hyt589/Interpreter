@@ -49,10 +49,9 @@
 
 ; defining a function for the return statement that returns the value of the expression being returned
 (define M_state_return
-  (lambda (stmt state return)
+  (lambda (stmt state)
     (cond
-      ((null? (cadr stmt)) (return (error "Nothing to M_state_return")))
-      ;(else 'M_state_return_cps (M_value (cadr stmt) state)
+      ((null? (cadr stmt)) (error "Nothing to M_state_return"))
       (else (append state (list (cons 'M_state_return (M_value (cadr stmt) state))))))))
 
 
@@ -113,8 +112,6 @@
       ;implement catch
       ;implement finally
       ;implement begin (block)
-         ;for each begin, cons a new list to the existing binding list
-         ;if the begin ends, remove the (car list) of the current binding list
       (else (error "Invalid statements")))))
 
 ;----------------------------------------------------------------------------------------------------
@@ -133,7 +130,6 @@
       (else (append state (list binding))))))
 
 ;defining a function that updates the bindings in a given state in a assignment statement
-;need to update the first layer first
 (define M_state_Assignment_updateBinding
   (lambda (binding state)
     (cond
@@ -147,7 +143,6 @@
   (lambda () '()))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
-;need to first look up first layer(car list), then second layer ...
 (define lookupvar
   (lambda (var state)
     (cond
