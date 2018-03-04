@@ -130,17 +130,31 @@
 
 ; This implementation of the state is a simple list of pairs, each pair contains a variable name and its value
 
-; defining a function that updates the bindings in a given state in a delaration statement
-(define M_state_Declaration_updateBinding_helper
-  (lambda (binding state break)
+; wrapper
+(define M_state_Declaration_updateBinding_layers_wrapper
+  (lambda (binding state layers)
     (call/cc
-     (cond
-       ((and (null? (M_state_topLayer state)) (null? (M_state_previousLayers state))) (break (list (cons (car binding) (M_state_topLayer state)))))
-       ((and (null? (M_state_topLayer state)) (not (null? (M_state_previousLayers state)))) (M_state_Declaration_updateBinding_helper binding (M_state_previousLayers state) break))
-       ((eq? (car binding) (car (M_state_topLayer state))) (break (error "Variable already declared")))
-       (else (
-      
+     (lambda (break)
+       (M_state_Declaration_updateBinding_layers binding state layers break)))))
 
+; defining a function that updates the bindings among all the layers
+(define M_state_Declaration_updateBinding_layers
+  (lambda (binding state layers break)
+    (cond
+      ((and (null? (M_state_topLayer layers)) (null? (M_state_previousLayers layers))) (break (list (cons binding (M_state_topLayer state)))))
+      ((and (null? (M_state_topLayer layers)) (not (null? (M_state_previousLayers layers)))) (M_state_Declaration_updateBinding_layers binding state (M_state_previousLayers layers) break))
+      ((M_state_Declaration_updateBinding_single binding (M_state_topLayer layers)) (break (error "Variable already declared")))
+      ((and (not (M_state_Declaration_updateBinding_single binding (M_state_topLayer layers))) (null? (M_state_previousLayers layers))) (break (list (cons (car binding) (M_state_topLayer state)))))
+      (else (M_state_Declaration_updateBinding_layers binding state (M_state_previousLayers state) break)))))
+      
+; defining a function that updates the bindings within a single layer
+(define M_state_Declaration_updateBinding_single
+  (lambda (binding layer)
+    (cond
+      ((null? layer) #f)
+      ((eq? (car binding) (caar layer)) #t)
+      ((not (null? (cdr layer))) (M_state_Declaration_updateBinding_single binding (cdr layer)))
+      (else #f))))
 
 ;defining a function that updates the bindings in a given state in a assignment statement
 ;need to update the first layer first
