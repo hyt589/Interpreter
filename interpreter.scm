@@ -160,6 +160,11 @@
       ((null? state) M_state_nullState)
       (else (cdr state)))))
 
+; defining a function that returns the layer corresponding to the current scope
+(define M_state_topLayer
+  (lambda (state)
+    (car state)))
+
 ; defining a function that returns a value of a variable if initialized or an error message if not
 ;need to first look up first layer(car list), then second layer ...
 (define lookupvar
