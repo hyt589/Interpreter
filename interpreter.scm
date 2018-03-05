@@ -147,7 +147,7 @@
       ((and (not (M_state_checkLayer binding (M_state_topLayer layers))) (null? (M_state_previousLayers layers))) (break (cons (cons binding (M_state_topLayer state)) (M_state_previousLayers state))))
       (else (M_state_Declaration_updateBinding binding state (M_state_previousLayers state) break)))))
       
-; defining a function that updates the bindings within a single layer
+; defining a function that checks if the bindings are within a single layer
 (define M_state_checkLayer
   (lambda (binding layer)
     (cond
@@ -209,14 +209,44 @@
   (lambda (state)
     (cdr state)))
 
+; defining a function that looks up a variable in a given layer. returns a pair of #f if the variable is not in the layer, (#t value) if it is and initialized, or error if not initialized
+(define lookupvarinlayer-cps
+  (lambda (var layer return)
+    (cond
+      ((null? layer) '(#f . #f))
+      ((and (eq? var (car (firstBindingInLayer layer)))
+            (not (null? (cdr (firstBindingInLayer layer))))) (return (cons #t (cdr (firstBindingInLayer layer)))))
+      ((eq? var (car (firstBindingInLayer layer))) (error "variable not initialized"))
+      (else (return (lookupvarinlayer-cps var (otherBindingsInLayer layer) return))))))
+
+; a wrapper for the above function
+(define lookupvarinlayer
+  (lambda (var layer)
+    (lookupvarinlayer-cps var layer (lambda (v) v))))
+
 ; defining a function that returns a value of a variable if initialized or an error message if not
 ;need to first look up first layer(car list), then second layer ...
+(define lookupvar-cps
+  (lambda (var state return)
+    (cond
+      ((eq? state (M_state_nullState)) (error "variable not declared"))
+      ((car (lookupvarinlayer var (M_state_topLayer state))) (return (cdr (lookupvarinlayer var (M_state_topLayer state)))))
+      ((null? state) (error "variable not declared"))
+      (else (return (lookupvar-cps var (M_state_previousLayers state) return))))))
+
+; a wrapper for the above funtion
 (define lookupvar
   (lambda (var state)
-    (cond
-      ((null? state) (error "Variable not declared!"))
-      ((and (eq? var (caar state)) (null? (cdar state))) (error "Variable not initialized!"))
-      ((eq? var (caar state)) (cdar state))
-      ((null? (cdr state)) (error "Variable not declared!"))
-      (else (lookupvar var (cdr state))))))
+    (lookupvar-cps var state (lambda (v) v))))
 
+(define firstBindingInLayer
+  (lambda (layer)
+    (cond
+      ((null? layer) '())
+      (else (car layer)))))
+
+(define otherBindingsInLayer
+  (lambda (layer)
+    (cond
+      ((null? layer) '())
+      (else (cdr layer)))))
