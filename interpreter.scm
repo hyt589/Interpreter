@@ -166,7 +166,8 @@
 ; defining a function that checks multiple layers for a varible and assign a value if it exists or return an error if not
 (define M_state_Assignment_updateBinding_layers
   (lambda (binding state break)
-    (cond 
+    (cond
+      ((null? state) (break (error "Variable not declared")))
       ((and (null? (M_state_topLayer state)) (null? (M_state_previousLayers state))) (break (error "Variable not declared")))
       ((M_state_checkLayer binding (M_state_topLayer state)) (cons (M_state_Assignment_updateBinding binding (M_state_topLayer state)) (M_state_previousLayers state)))
       (else (cons (M_state_topLayer state) (M_state_Assignment_updateBinding_layers binding (M_state_previousLayers state) break))))))
