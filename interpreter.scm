@@ -156,12 +156,14 @@
       ((not (null? (cdr layer))) (M_state_checkLayer binding (cdr layer)))
       (else #f))))
 
+; a wrapper function that calls the assignment function on multiple layers
 (define M_state_Assignment_updateBinding_wrapper
   (lambda (binding state)
     (call/cc
      (lambda (break)
        (M_state_Assignment_updateBinding_layers binding state break)))))
 
+; defining a function that checks multiple layers for a varible and assign a value if it exists or return an error if not
 (define M_state_Assignment_updateBinding_layers
   (lambda (binding state break)
     (cond 
