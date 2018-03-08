@@ -12,23 +12,25 @@
 ;------------------------Interpreter---------------------------------------
 
 ; abstraction
-(define first car)
-(define second cadr)
-(define third caddr)
-(define second* cdr)
-(define third* cddr)
+(define getfirst car)
+(define getsecond cadr)
+(define getthird caddr)
+(define getforth cadddr)
+(define getsecond* cdr)
+(define getthird* cddr)
+(define getforth* cdddr)
 
 ; defining a function that returns a state after a declaration statement
 (define M_state_declare
   (lambda (stmt state)
     (cond
-      ((null? (third* stmt)) (M_state_declareBinding (cons (second stmt) null) state))
-      (else (M_state_declareBinding (cons (second stmt) (M_value (third stmt) state)) state)))))
+      ((null? (getthird* stmt)) (M_state_declareBinding (cons (getsecond stmt) null) state))
+      (else (M_state_declareBinding (cons (getsecond stmt) (M_value (getthird stmt) state)) state)))))
 
 ; defining a function that returns a state after an assignment statement
 (define M_state_assign
   (lambda (stmt state)
-    (M_state_updateBinding (cons (second stmt) (M_value (third stmt) state)) state)))
+    (M_state_updateBinding (cons (getsecond stmt) (M_value (getthird stmt) state)) state)))
       
 ; defining a function that returns the value of an expression
 (define M_value
@@ -38,21 +40,21 @@
       ((eq? exp '#t) 'true)
       ((eq? exp '#f) 'false)
       ((symbol? exp) (M_value_var exp state))
-      ((and (null? (second* exp)) (eq? (first exp) '-)) (- 0 (M_value (second exp) state)))
-      ((eq? (first exp) '+) (+ (M_value (second exp) state) (M_value (third exp) state)))
-      ((eq? (first exp) '-) (- (M_value (second exp) state) (M_value (third exp) state)))
-      ((eq? (first exp) '*) (* (M_value (second exp) state) (M_value (third exp) state)))
-      ((eq? (first exp) '/) (quotient (M_value (second exp) state) (M_value (third exp) state)))
-      ((eq? (first exp) '%) (modulo (M_value (second exp) state) (M_value (third exp) state)))
-      ((or (eq? (first exp) '==)
-           (or (eq? (first exp) '<)
-               (or (eq? (first exp) '>)
-                   (or (eq? (first exp) '<=)
-                       (or (eq? (first exp) '>=)
-                           (or (eq? (first exp) '!=)
-                               (or (eq? (first exp) '&&)
-                                   (or (eq? (first exp) '||)
-                                       (or (eq? (first exp) '!)))))))))) (M_value (M_bool exp state) state))
+      ((and (null? (second* exp)) (eq? (getfirst exp) '-)) (- 0 (M_value (getsecond exp) state)))
+      ((eq? (getfirst exp) '+) (+ (M_value (getsecond exp) state) (M_value (getthird exp) state)))
+      ((eq? (getfirst exp) '-) (- (M_value (getsecond exp) state) (M_value (getthird exp) state)))
+      ((eq? (getfirst exp) '*) (* (M_value (getsecond exp) state) (M_value (getthird exp) state)))
+      ((eq? (getfirst exp) '/) (quotient (M_value (getsecond exp) state) (M_value (getthird exp) state)))
+      ((eq? (getfirst exp) '%) (modulo (M_value (getsecond exp) state) (M_value (getthird exp) state)))
+      ((or (eq? (getfirst exp) '==)
+           (or (eq? (getfirst exp) '<)
+               (or (eq? (getfirst exp) '>)
+                   (or (eq? (getfirst exp) '<=)
+                       (or (eq? (getfirst exp) '>=)
+                           (or (eq? (getfirst exp) '!=)
+                               (or (eq? (getfirst exp) '&&)
+                                   (or (eq? (getfirst exp) '||)
+                                       (or (eq? (getfirst exp) '!)))))))))) (M_value (M_bool exp state) state))
       (else (error "unknown operator")))))
 
 ; defining a function that returns a boolean based on the input statement
@@ -63,15 +65,15 @@
       ((eq? stmt 'true) '#t)
       ((eq? stmt 'false) '#f)
       ((symbol? stmt) (M_bool (M_value_var stmt state) state))
-      ((eq? (first stmt) '==) (= (M_value (second stmt) state) (M_value (third stmt) state)))
-      ((eq? (first stmt) '<) (< (M_value (second stmt) state) (M_value (third stmt) state)))
-      ((eq? (first stmt) '>) (> (M_value (second stmt) state) (M_value (third stmt) state)))
-      ((eq? (first stmt) '>=) (>= (M_value (second stmt) state) (M_value (third stmt) state)))
-      ((eq? (first stmt) '<=) (<= (M_value (second stmt) state) (M_value (third stmt) state)))
-      ((eq? (first stmt) '!=) (not (= (M_value (second stmt) state) (M_value (third stmt) state))))
-      ((eq? (first stmt) '&&) (and (M_bool (second stmt) state) (M_bool (third stmt) state)))
-      ((eq? (first stmt) '||) (or (M_bool (second stmt) state) (M_bool (third stmt) state)))
-      ((eq? (first stmt) '!) (not (M_bool (second stmt) state)))
+      ((eq? (getfirst stmt) '==) (= (M_value (getsecond stmt) state) (M_value (getthird stmt) state)))
+      ((eq? (getfirst stmt) '<) (< (M_value (getsecond stmt) state) (M_value (getthird stmt) state)))
+      ((eq? (getfirst stmt) '>) (> (M_value (getsecond stmt) state) (M_value (getthird stmt) state)))
+      ((eq? (getfirst stmt) '>=) (>= (M_value (getsecond stmt) state) (M_value (getthird stmt) state)))
+      ((eq? (getfirst stmt) '<=) (<= (M_value (getsecond stmt) state) (M_value (getthird stmt) state)))
+      ((eq? (getfirst stmt) '!=) (not (= (M_value (getsecond stmt) state) (M_value (getthird stmt) state))))
+      ((eq? (getfirst stmt) '&&) (and (M_bool (getsecond stmt) state) (M_bool (getthird stmt) state)))
+      ((eq? (getfirst stmt) '||) (or (M_bool (getsecond stmt) state) (M_bool (getthird stmt) state)))
+      ((eq? (getfirst stmt) '!) (not (M_bool (getsecond stmt) state)))
       (else (error "Invalid conditional statement!")))))
 
 ;----------------------------------Need To Do--------------------------------------------
@@ -114,17 +116,22 @@
 (define M_state_if
   (lambda (stmt state)
     (cond
-      ((M_bool (cadr stmt) state) (M_state (caddr stmt) state))
-      ((null? (cdddr stmt)) state)
-      (else (M_state (cadddr stmt) state)))))
+      ((M_bool (getsecond stmt) state) (M_state (getthird stmt) state))
+      ((null? (getforth* stmt)) state)
+      (else (M_state (getforth stmt) state)))))
 
 ; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
+(define run-cps
+  (lambda (stmtlis state return)
+    (cond
+      ((null? stmtlis) (return state))
+      ((null? (getsecond* stmtlis)) (return (M_state (getfirst stmtlis) state)))
+      (else (return (run (getsecond* stmtlis) (M_state (getfirst stmtlis) state) return))))))
+
+;wrapper for the above function
 (define run
   (lambda (stmtlis state)
-    (cond
-      ((null? stmtlis) state)
-      ((null? (cdr stmtlis)) (M_state (car stmtlis) state))
-      (else (run (cdr stmtlis) (M_state (car stmtlis) state))))))
+    (run-cps stmtlis state (lambda (v) v))))
 
 ;defining a function that returns a state after a while statement
 (define M_state_while
@@ -137,8 +144,8 @@
 (define M_state_block
   (lambda (body state)
     (cond
-      ((null? body) state)
-      (else (M_state_removeLayer (run body (M_state_addLayer state)))))))
+      ((null? (second* body)) state)
+      (else (M_state_removeLayer (run (second* body) (M_state_addLayer state)))))))
 
 
 ;defining a function that returns a state after a statement
@@ -146,17 +153,15 @@
   (lambda (stmt state)
     (cond
       ((null? stmt) state)
-      ((eq? (car stmt) 'var) (M_state_declaration stmt state))
-      ((eq? (car stmt) '=) (M_state_assignment stmt state))
-      ((eq? (car stmt) 'return) (M_state_return stmt state))
-      ((eq? (car stmt) 'if) (M_state_if stmt state))
-      ((eq? (car stmt) 'while) (M_state_while stmt state))
+      ((eq? (getfirst stmt) 'var) (M_state_declaration stmt state))
+      ((eq? (getfirst stmt) '=) (M_state_assignment stmt state))
+      ((eq? (getfirst stmt) 'return) (M_state_return stmt state))
+      ((eq? (getfirst stmt) 'if) (M_state_if stmt state))
+      ((eq? (getfirst stmt) 'while) (M_state_while stmt state))
+      ((eq? (getfirst stmt) 'begin) (M_state_block stmt state))
       ;implement try
       ;implement catch
       ;implement finally
-      ((eq? (car stmt) 'begin) (M_state_block (cdr stmt) state))
-         ;for each begin, cons a new list to the existing binding list
-         ;if the begin ends, remove the (car list) of the current binding list
       (else (error "Invalid statements")))))
 
 
@@ -253,7 +258,9 @@
 (define M_value_var-cps
   (lambda (var state return)
     (cond
-      ((car (M_value_varInLayer var (topLayer state))) (return (bindingVal (cdr (M_value_varInLayer var (topLayer state))))))
+      ((and (car (M_value_varInLayer var (topLayer state)))
+            (not (null? (getsecond* (M_value_varInLayer var (topLayer state)))))) (return (bindingVal (cdr (M_value_varInLayer var (topLayer state))))))
+      ((car (M_value_varInLayer var (topLayer state))) (return (error "Variable not initialized")))
       ((null? (bottomLayers state)) (return (error "Variable not diclared!")))
       (else (return (M_value_var-cps var (bottomLayers state) return))))))
 
