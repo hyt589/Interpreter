@@ -11,17 +11,24 @@
 ;--------------------------------------------------------------------------
 ;------------------------Interpreter---------------------------------------
 
+; abstraction
+(define first car)
+(define second cadr)
+(define third caddr)
+(define second* cdr)
+(define third* cddr)
+
 ; defining a function that returns a state after a declaration statement
 (define M_state_declare
   (lambda (stmt state)
     (cond
-      ((null? (cddr stmt)) (M_state_declareBinding (cons (cadr stmt) null) state))
-      (else (M_state_declareBinding (cons (cadr stmt) (M_value (caddr stmt) state)) state)))))
+      ((null? (third* stmt)) (M_state_declareBinding (cons (second stmt) null) state))
+      (else (M_state_declareBinding (cons (second stmt) (M_value (third stmt) state)) state)))))
 
 ; defining a function that returns a state after an assignment statement
 (define M_state_assign
   (lambda (stmt state)
-    (M_state_updateBinding (cons (cadr stmt) (M_value (caddr stmt) state)) state)))
+    (M_state_updateBinding (cons (second stmt) (M_value (third stmt) state)) state)))
       
 ; defining a function that returns the value of an expression
 (define M_value
@@ -31,21 +38,21 @@
       ((eq? exp '#t) 'true)
       ((eq? exp '#f) 'false)
       ((symbol? exp) (M_value_var exp state))
-      ((and (null? (cddr exp)) (eq? (car exp) '-)) (- 0 (M_value (cadr exp) state)))
-      ((eq? (car exp) '+) (+ (M_value (cadr exp) state) (M_value (caddr exp) state)))
-      ((eq? (car exp) '-) (- (M_value (cadr exp) state) (M_value (caddr exp) state)))
-      ((eq? (car exp) '*) (* (M_value (cadr exp) state) (M_value (caddr exp) state)))
-      ((eq? (car exp) '/) (quotient (M_value (cadr exp) state) (M_value (caddr exp) state)))
-      ((eq? (car exp) '%) (modulo (M_value (cadr exp) state) (M_value (caddr exp) state)))
-      ((or (eq? (car exp) '==)
-           (or (eq? (car exp) '<)
-               (or (eq? (car exp) '>)
-                   (or (eq? (car exp) '<=)
-                       (or (eq? (car exp) '>=)
-                           (or (eq? (car exp) '!=)
-                               (or (eq? (car exp) '&&)
-                                   (or (eq? (car exp) '||)
-                                       (or (eq? (car exp) '!)))))))))) (M_value (M_bool exp state) state))
+      ((and (null? (second* exp)) (eq? (first exp) '-)) (- 0 (M_value (second exp) state)))
+      ((eq? (first exp) '+) (+ (M_value (second exp) state) (M_value (third exp) state)))
+      ((eq? (first exp) '-) (- (M_value (second exp) state) (M_value (third exp) state)))
+      ((eq? (first exp) '*) (* (M_value (second exp) state) (M_value (third exp) state)))
+      ((eq? (first exp) '/) (quotient (M_value (second exp) state) (M_value (third exp) state)))
+      ((eq? (first exp) '%) (modulo (M_value (second exp) state) (M_value (third exp) state)))
+      ((or (eq? (first exp) '==)
+           (or (eq? (first exp) '<)
+               (or (eq? (first exp) '>)
+                   (or (eq? (first exp) '<=)
+                       (or (eq? (first exp) '>=)
+                           (or (eq? (first exp) '!=)
+                               (or (eq? (first exp) '&&)
+                                   (or (eq? (first exp) '||)
+                                       (or (eq? (first exp) '!)))))))))) (M_value (M_bool exp state) state))
       (else (error "unknown operator")))))
 
 ; defining a function that returns a boolean based on the input statement
@@ -56,15 +63,15 @@
       ((eq? stmt 'true) '#t)
       ((eq? stmt 'false) '#f)
       ((symbol? stmt) (M_bool (M_value_var stmt state) state))
-      ((eq? (car stmt) '==) (= (M_value (cadr stmt) state) (M_value (caddr stmt) state)))
-      ((eq? (car stmt) '<) (< (M_value (cadr stmt) state) (M_value (caddr stmt) state)))
-      ((eq? (car stmt) '>) (> (M_value (cadr stmt) state) (M_value (caddr stmt) state)))
-      ((eq? (car stmt) '>=) (>= (M_value (cadr stmt) state) (M_value (caddr stmt) state)))
-      ((eq? (car stmt) '<=) (<= (M_value (cadr stmt) state) (M_value (caddr stmt) state)))
-      ((eq? (car stmt) '!=) (not (= (M_value (cadr stmt) state) (M_value (caddr stmt) state))))
-      ((eq? (car stmt) '&&) (and (M_bool (cadr stmt) state) (M_bool (caddr stmt) state)))
-      ((eq? (car stmt) '||) (or (M_bool (cadr stmt) state) (M_bool (caddr stmt) state)))
-      ((eq? (car stmt) '!) (not (M_bool (cadr stmt) state)))
+      ((eq? (first stmt) '==) (= (M_value (second stmt) state) (M_value (third stmt) state)))
+      ((eq? (first stmt) '<) (< (M_value (second stmt) state) (M_value (third stmt) state)))
+      ((eq? (first stmt) '>) (> (M_value (second stmt) state) (M_value (third stmt) state)))
+      ((eq? (first stmt) '>=) (>= (M_value (second stmt) state) (M_value (third stmt) state)))
+      ((eq? (first stmt) '<=) (<= (M_value (second stmt) state) (M_value (third stmt) state)))
+      ((eq? (first stmt) '!=) (not (= (M_value (second stmt) state) (M_value (third stmt) state))))
+      ((eq? (first stmt) '&&) (and (M_bool (second stmt) state) (M_bool (third stmt) state)))
+      ((eq? (first stmt) '||) (or (M_bool (second stmt) state) (M_bool (third stmt) state)))
+      ((eq? (first stmt) '!) (not (M_bool (second stmt) state)))
       (else (error "Invalid conditional statement!")))))
 
 ;----------------------------------Need To Do--------------------------------------------
