@@ -81,6 +81,105 @@
 ;1. M_state_block
 
 ;2. try-catch-finally
+;abstraction
+(define tryblock cadr)
+(define secondblock caddr)
+(define thirdblock cadddr)
+(define blockidentifier car)
+(define exception caadr)
+(define catchblock caddr)
+(define finallyblock cadr)
+(define lastelement cdddr)
+(define ex? car)
+(define trystate cadr)
+(define exval caddr)
+
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+;----------------------------------------try-catch-finally--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+(define M_state_trycatchfinally
+  (lambda (stmt state)
+    (cond
+      ;exception thrown, try-catch-finally
+      ((and (not (null? (lastelement stmt)))                               
+            (ex? (M_state_try (tryblock stmt) (M_state_addLayer state))))  ;add layer to state - execute tryblock(remove top layer upone exit)
+                                                                           ;add layer to state - declare exception with value - execute catch(remove top layer upone exit)
+                                                                           ;add layer to state - execute finally(remove top layer upon exit)
+                                                                           (M_state_finally (finallyblock (thirdblock stmt))
+                                                                                            (M_state_addLayer (M_state_catch (catchblock (secondblock stmt)) (M_state_declareBinding (cons (exception (secondblock stmt)) (exval (M_state_try (tryblock stmt) (M_state_addLayer state))))
+                                                                                                                                                     (M_state_addLayer (trystate (M_state_try (tryblock stmt) (M_state_addLayer state)))))))))
+      ;no exception thrown, try-catch-finally   --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      ((not (null? (lastelement stmt)))       ;add layer to state - execute tryblock(remove top layer upon exit)
+                                              ;add layer to state - execute finally(remove top layer upon exit)
+                                              (M_state_finally (finallyblock (thirdblock stmt)) (M_state_addLayer
+                                                                                            (trystate (M_state_try (tryblock stmt) (M_state_addLayer state))))))
+      ;exception thrown, try-catch     --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      ((and (ex? (M_state_try (tryblock stmt) (M_state_addLayer state)))
+            (eq? (blockidentifier (secondblock stmt)) 'catch))           ;add layer to state - execute tryblock(remove top layer upon exit)
+                                                                         ;add layer to state - declare exception with value - execute catch(remove top layer upon exit)
+                                                                         (M_state_catch (catchblock (secondblock stmt)) (M_state_delareBinding (cons (exception (secondblock stmt)) (exval (M_state_try (tryblock stmt) (M_state_addLayer state))))
+                                                                                                (M_state_addLayer (trystate (M_state_try (tryblock stmt) (M_state_addLayer state)))))))
+      ;no exception thrown, try-catch  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      ((eq? (blockidentifier (secondblock stmt)) 'catch) ;add layer to state - execute tryblock(remove top layer upon exit)
+                                                         (trystate (M_state_try (tryblock stmt) (M_state_addLayer state))))
+      ;try-finally   --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      ((eq? (blockidentifier (secondblock stmt)) 'finally) ;add layer to state - execute tryblock(remove top layer upon exit)
+                                                           ;add layer to state - execute finally(remove top layer upon exit)
+                                                           (M_state_finally (finallyblock (secondblock stmt)) (M_state_addLayer
+                                                                                                               (trystate (M_state_try (tryblock stmt) (M_state_addLayer state))))))
+      ;other form would be unacceptable
+      (else (error "invalid try statement")))))
+                                                           
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                         
+;cps function that executes the try block
+(define M_state_try-cps
+  (lambda (stmtlis state return);the state passed in already has an empty top layer added in trycatchfinally
+    (cond
+      ;stmtlis is null, no throw statement is executed, return (#f, a state after removing the top layer)
+      ((null? stmtlis) (return (cons #f (list (M_state_removeLayer state)))))
+      ;throw a list of (#t, a state after removing the top layer, exception value)
+      ((eq? (getfirst (getfirst stmtlis)) 'throw) (return (cons #t (cons (M_state_removeLayer state) (list (M_value (getsecond (getfirst stmtlis)) state))))))
+      ;if no throw statement is executed return (#f, a state after removing the top layer)
+      ((null? (getsecond* stmtlis)) (return (cons #f (list (M_state_removeLayer (M_state (getfirst stmtlis) state))))))
+      ;recurse
+      (else (return (M_state_try-cps  (getsecond* stmtlis) (M_state (getfirst stmtlis) state) return))))))
+
+; wrapper function for try block
+(define M_state_try
+  (lambda (stmtlis state)
+    (M_state_try-cps stmtlis state (lambda (v) v))))
+
+;(define M_state_catch)
+(define M_state_catch-cps
+  (lambda (stmtlis state return) ;the state passed in should already have an extra layer for this block, and "var e = ex" should already have been declared
+    (cond
+      ;return a state with top layer removed if the stmtlis is null
+      ((null? stmtlis) (return (M_state_removeLayer state)))
+      ;if stmtlis is not null, declare "var e = ex" in the top layer, execute stmtlis, and remove the top layer
+      ((null? (getsecond* stmtlis)) (return (M_state_removeLayer (M_state (getfirst stmtlis) state))))
+      (else (return (M_state_catch-cps (getsecond* stmtlis) (M_state (getfirst stmtlis) state) return))))))
+
+;wrapper function for catch block
+(define M_state_catch
+  (lambda (stmtlis state)
+    (M_state_catch-cps stmtlis state (lambda (v) v))))
+
+
+;cps function that executes the finally block
+(define M_state_finally-cps
+  (lambda (stmtlis state return);the state passed in should've already been added a new layer
+    (cond
+      ((null? stmtlis) (return (M_state_removeLayer state)))
+      ((null? (getsecond* stmtlis)) (return (M_state_removeLayer (M_state (getfirst stmtlis) state))))
+      (else (return (M_state_finally-cps (getsecond* stmtlis) (M_state (getfirst stmtlis) state) return))))))
+
+;wrapper function for finally block
+(define M_state_finally
+  (lambda (stmtlis state)
+    (M_state_finally-cps stmtlis state (lambda (v) v))))
+
+
 
 ;3. break
 
@@ -159,9 +258,7 @@
       ((eq? (getfirst stmt) 'if) (M_state_if stmt state))
       ((eq? (getfirst stmt) 'while) (M_state_while stmt state))
       ((eq? (getfirst stmt) 'begin) (M_state_block stmt state))
-      ;implement try
-      ;implement catch
-      ;implement finally
+      ((eq? (getfirst stmt) 'try) (M_state_trycatchfinally stmt state))
       (else (error "Invalid statements")))))
 
 
