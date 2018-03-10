@@ -9,7 +9,7 @@
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return 
-          (call/cc (lambda (return) (run (parser filename) M_state_nullState return '() '()))))))))
+          (call/cc (lambda (return) (run (parser filename) M_state_nullState return '() '() '()))))))))
 
 
 ; abstractions
@@ -104,55 +104,55 @@
 
 ; defining a function that returns a state after an if statement
 (define M_state_if
-  (lambda (stmt state return whileReturn throwReturn)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
-      ((M_bool (getSecond stmt) state) (M_state (getThird stmt) state return whileReturn throwReturn))
+      ((M_bool (getSecond stmt) state) (M_state (getThird stmt) state return whileReturn throwReturn breakReturn))
       ((null? (getAfterThird stmt)) state)
-      (else (M_state (getFourth stmt) state return whileReturn throwReturn)))))
+      (else (M_state (getFourth stmt) state return whileReturn throwReturn breakReturn)))))
 
 ; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
 (define run-cps
-  (lambda (stmtlis state return whileReturn throwReturn cpsreturn)
+  (lambda (stmtlis state return whileReturn throwReturn breakReturn cpsreturn)
     (cond
       ((null? stmtlis) (cpsreturn state))
-      ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) state return whileReturn throwReturn)))
-      (else (cpsreturn (run-cps (getAfterFirst stmtlis) (M_state (getFirst stmtlis) state return whileReturn throwReturn) return whileReturn throwReturn cpsreturn))))))
+      ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn)))
+      (else (cpsreturn (run-cps (getAfterFirst stmtlis) (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn))))))
 
 ; defining a wrapper for run-cps
 (define run
-  (lambda (stmtlis state return whileReturn throwReturn)
-    (run-cps stmtlis state return whileReturn throwReturn (lambda (v) v))))
+  (lambda (stmtlis state return whileReturn throwReturn breakReturn)
+    (run-cps stmtlis state return whileReturn throwReturn breakReturn (lambda (v) v))))
 
 
 ;defining a function that returns a state after a while statement
 (define M_state_while-cps
-  (lambda (stmt state return whileReturn throwReturn cpsreturn)
+  (lambda (stmt state return whileReturn throwReturn breakReturn cpsreturn)
     (cond
       ((definedInTopBinding (bind 'gotype 'break) state) (cpsreturn state))
-      ((M_bool (getSecond stmt) state) (cpsreturn (M_state_while-cps stmt (run (getAfterSecond stmt) state return whileReturn throwReturn) return whileReturn throwReturn cpsreturn)))
+      ((M_bool (getSecond stmt) state) (cpsreturn (M_state_while-cps stmt (run (getAfterSecond stmt) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn)))
       (else (cpsreturn state)))))
 
 ;defining a wrapper for while-cps
 (define M_state_while
-  (lambda (stmt state return whileReturn throwReturn)
-    (M_state_while-cps stmt state return whileReturn throwReturn (lambda (v) v))))
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
+    (M_state_while-cps stmt state return whileReturn throwReturn breakReturn (lambda (v) v))))
 
-
+(define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
 (define M_state
-  (lambda (stmt state return whileReturn throwReturn)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state)))
       ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state ))))
-      ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn))
-      ((eq? (getFirst stmt) 'while) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn))
-      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn)))))
+      ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'while) (returnit (call/cc (lambda (breakReturn) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
+      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
       ((eq? (getFirst stmt) 'continue) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'continue) state)))
-      ((eq? (getFirst stmt) 'break) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'break) state)))
-      ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn))
+      ((eq? (getFirst stmt) 'break) (breakReturn (M_state_Assignment_updateBinding (bind 'gotype 'break) state)))
+      ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
       (else (error "Invalid statements")))))
 
 ; abstraction
@@ -162,13 +162,13 @@
 
 ; defining a function for catch so that returns a state after catch
 (define M_state_catch
-  (lambda (stmt state return whileReturn throwReturn)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
      (if (null? stmt) state
         (if (equal? (lookupvar 'throw state) 'none)
             state
             (run (catchBody stmt) 
                 (M_state_Declaration_updateBinding (bind (catchVar stmt) (lookupvar 'throw state)) state)
-                return whileReturn throwReturn)))))
+                return whileReturn throwReturn breakReturn)))))
 
 ; abstraction
 (define finalStmt getSecond)
@@ -177,18 +177,18 @@
 
 ; defining a function for finally so that returns a state after finally
 (define M_state_final
-  (lambda (stmt state return whileReturn throwReturn)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
       (if (null? stmt) state
-        (run (finalStmt stmt) state return whileReturn throwReturn))))
+        (run (finalStmt stmt) state return whileReturn throwReturn breakReturn))))
 
 ; defining a function for try statement so that it returns a state after try statement
 (define M_state_try
-  (lambda (stmt state return whileReturn throwReturn)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
     (M_state_final (finalBody stmt)
     (M_state_catch (catchBody stmt)   (call/cc (lambda (throwReturn) 
-                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw 'none) state) return whileReturn throwReturn)))
-                   return whileReturn throwReturn)
-             return whileReturn throwReturn)))
+                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw 'none) state) return whileReturn throwReturn breakReturn)))
+                   return whileReturn throwReturn breakReturn)
+             return whileReturn throwReturn breakReturn)))
 
 
 
