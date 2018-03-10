@@ -15,7 +15,7 @@
 ; abstractions
 (define getFirst car)
 (define getAfterFirst cdr)
-(define getSecond getFirstdr)
+(define getSecond cadr)
 (define getAfterSecond cddr)
 (define getThird caddr)
 (define getAfterThird cdddr)
@@ -243,12 +243,12 @@
     (cond
        ((null? state) (cpsreturn #f))
        ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
-       (else (cpsreturn (findvar var (getAfterFirst state) cpsreturn))))))
+       (else (cpsreturn (findvar-cps var (getAfterFirst state) cpsreturn))))))
 
 ; defining a wrapper for findvar-cps
 (define findvar
   (lambda (var state)
-    (findvar-cps var state (lmabda(v) v))))
+    (findvar-cps var state (lambda(v) v))))
 
 
 
