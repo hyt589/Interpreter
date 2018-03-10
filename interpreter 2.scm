@@ -23,9 +23,9 @@
 
 (define addlayer cons)
 (define emptyLayer '())
-(define poplayer getAfterFirst)
-(define topLayer getFirst)
-(define key getFirst)
+(define poplayer cdr)
+(define topLayer car)
+(define key car)
 (define value getSecond)
 (define M_state_nullState '(()))
 (define addBinding cons)
@@ -95,7 +95,7 @@
       ((eq? (getFirst stmt) '<) (< (M_value (getSecond stmt) state) (M_value (getThird stmt) state)))
       ((eq? (getFirst stmt) '>) (> (M_value (getSecond stmt) state) (M_value (getThird stmt) state)))
       ((eq? (getFirst stmt) '>=) (>= (M_value (getSecond stmt) state) (M_value (getThird stmt) state)))
-      ((eq? (getFirst stmt) '<=) (<= (M_value (getSecond stmt) state) (M_value (getThird stmt) saaatate)))
+      ((eq? (getFirst stmt) '<=) (<= (M_value (getSecond stmt) state) (M_value (getThird stmt) state)))
       ((eq? (getFirst stmt) '!=) (not (= (M_value (getSecond stmt) state) (M_value (getThird stmt) state))))
       ((eq? (getFirst stmt) '&&) (and (M_bool (getSecond stmt) state) (M_bool (getThird stmt) state)))
       ((eq? (getFirst stmt) '||) (or (M_bool (getSecond stmt) state) (M_bool (getThird stmt) state)))
@@ -129,8 +129,8 @@
   (lambda (stmt state return whileReturn throwReturn cpsreturn)
     (cond
       ((definedInTopBinding (bind 'gotype 'break) state) (cpsreturn state))
-      ((M_bool (getSecond stmt) state) (cps return (M_state_while stmt (run (getAfterSecond stmt) state return whileReturn throwReturn) return whileReturn throwReturn cpsreturn)))
-      (else (cppsreturn state)))))
+      ((M_bool (getSecond stmt) state) (cpsreturn (M_state_while-cps stmt (run (getAfterSecond stmt) state return whileReturn throwReturn) return whileReturn throwReturn cpsreturn)))
+      (else (cpsreturn state)))))
 
 ;defining a wrapper for while-cps
 (define M_state_while
@@ -213,7 +213,7 @@
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ((assq (key binding) (topLayer state)) (cpsreturn (cons (addBinding binding (topLayer state)) (getAfterFirst state))))
-       (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cons (topLayer state) v)))))))
+       (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
 (define M_state_Assignment_updateBinding
@@ -224,7 +224,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-     (if (findvar var state) (value (findvar var state)) (error "Variable not declared!"))))
+     (if (findvar var state) (value (findvar var state)) ((error "Variable not declared!")))))
 
 
 ; defining a function that returns boolean indicating whether the binding defined in top layer
