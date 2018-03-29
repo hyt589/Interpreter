@@ -216,12 +216,12 @@
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ;if the variable is already declared:
-       ((assq (key binding) (topLayer state)) (cpsreturn (updateBox ((assq (key binding) (topLayer state))) binding)))
+       ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
 
 (define updateBox
-  (lambda (oldbinding newbinding)
-    ((set-box! (getSecond oldbinding) (unbox (getSecond newbinding))))))
+  (lambda (oldbinding newbinding state)
+    (begin (set-box! (getSecond oldbinding) (unbox (getSecond newbinding))) state)))
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
 (define M_state_Assignment_updateBinding
@@ -233,7 +233,7 @@
 (define lookupvar
   (lambda (var state)
      (if (findvar var state)
-         (value (findvar var state))
+         (unbox (getSecond (findvar var state)))
          ((error "Variable not declared!")))))
 
 
