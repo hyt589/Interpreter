@@ -201,6 +201,8 @@
 ; This implementation of the state is a list of list of pairs, each list of pairs is a layer,
 ; each pair contains a variable name and its value
 
+
+; have to redo all the code with assq because now we are changing the actual box not adding more.
 ; defining a function that updates the bindings in a given state in a delaration statement
 (define M_state_Declaration_updateBinding
   (lambda (binding state)
@@ -230,7 +232,9 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-     (if (findvar var state) (value (findvar var state)) ((error "Variable not declared!")))))
+     (if (findvar var state)
+         (value (findvar var state))
+         ((error "Variable not declared!")))))
 
 
 ; defining a function that returns boolean indicating whether the binding defined in top layer
