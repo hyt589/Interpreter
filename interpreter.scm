@@ -133,6 +133,11 @@
       ((M_bool (getSecond stmt) state) (cpsreturn (M_state_while-cps stmt (run (getAfterSecond stmt) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn)))
       (else (cpsreturn state)))))
 
+; defining a function that returns boolean indicating whether the binding defined in top layer
+(define definedInTopBinding
+  (lambda (binding state)
+   (equal? (assq (key binding) (topLayer state)) binding)))
+
 ;defining a wrapper for while-cps
 (define M_state_while
   (lambda (stmt state return whileReturn throwReturn breakReturn)
@@ -201,8 +206,6 @@
 ; This implementation of the state is a list of list of pairs, each list of pairs is a layer,
 ; each pair contains a variable name and its value
 
-
-; have to redo all the code with assq because now we are changing the actual box not adding more.
 ; defining a function that updates the bindings in a given state in a delaration statement
 (define M_state_Declaration_updateBinding
   (lambda (binding state)
@@ -215,10 +218,11 @@
   (lambda (binding state cpsreturn)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
-       ;if the variable is already declared:
+       ;if the variable is already declared, update the box
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
 
+; if the box has been updated, return the state
 (define updateBox
   (lambda (oldbinding newbinding state)
     (begin (set-box! (getSecond oldbinding) (unbox (getSecond newbinding))) state)))
@@ -228,7 +232,6 @@
   (lambda (binding state)
     (M_state_Assignment_updateBinding-cps binding state (lambda(v) v))))
 
-
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
@@ -236,18 +239,7 @@
          (unbox (getSecond (findvar var state)))
          ((error "Variable not declared!")))))
 
-
-; defining a function that returns boolean indicating whether the binding defined in top layer
-(define definedInTopBinding
-  (lambda (binding state)
-   (equal? (assq (key binding) (topLayer state)) binding)))
-
-; defining a function that adds a binding to state
-(define addBind
-  (lambda (binding state)
-    (cons (addBinding binding (topLayer state)) (getAfterFirst state))))
-
-; defining a function that finds the variable in state
+; defining a function that finds the binding of the variable in state
 (define findvar-cps
   (lambda (var state cpsreturn)
     (cond
@@ -261,6 +253,11 @@
     (findvar-cps var state (lambda(v) v))))
 
 
+; Used this line to test whether updateBinding is updating the boxes correctly
+; (lookupvar 'x (M_state_Assignment_updateBinding (list 'x (box '6)) (M_state_Declaration_updateBinding (list 'x (box '3)) '(()))))
+; x is initialized as 3 and the updateBinding updates x with a value of 6 and return the state,
+; we then lookupvar x to see if the value of x has changed.
+; the above line returns 6, so it works, I think...
 
 
 
