@@ -3,7 +3,7 @@
 ;--------------------------------------------------------------------------------------------------------
 ;---------------------------Interpreter Implementation---------------------------------------------------
 
-; definign a function that takes an input file to be executed and returns a value
+; defining a function that takes an input file to be executed and returns a value
 (define interpret
   (lambda (filename)
     (cond
@@ -143,6 +143,13 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (M_state_while-cps stmt state return whileReturn throwReturn breakReturn (lambda (v) v))))
 
+; defining a function that returns the state after storing a function
+(define M_state_function
+  (lambda (func state)
+    (M_state_Declaration_updateBinding func state)))
+    
+    
+
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
 (define M_state
@@ -159,6 +166,7 @@
       ((eq? (getFirst stmt) 'continue) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'continue) state)))
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
       ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'function) (M_state_function (getAfterFirst stmt) state))
       (else (error "Invalid statements")))))
 
 ; abstraction
