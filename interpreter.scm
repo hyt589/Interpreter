@@ -53,8 +53,7 @@
       ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return 
-          (call/cc (lambda (return) (run (getFourth (lookupfunc (getSecond exp) state)) (createFuncLayer (getThird (lookupfunc (getSecond exp) state)) (getAfterSecond exp) state) return '() '() '())))))
+      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp state return '() '() '())))))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -156,6 +155,11 @@
 (define M_state_function
   (lambda (func state)
     (M_state_Declaration_function func state)))
+
+; defining a function that returns the state after running a function
+(define M_state_funcall
+  (lambda (funcallstat state return whileReturn throwReturn breakReturn)
+    (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn)))
     
 
 (define returnit (lambda(v) v))
@@ -175,7 +179,7 @@
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
       ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
-      ((eq? (getFirst stmt) 'funcall) (run (getFourth (lookupfunc (getSecond exp) state)) (createFuncLayer (getThird (lookupfunc (getSecond exp) (addlayer '() state)) (getAfterSecond exp) state) return '() '() '())))
+      ((eq? (getFirst stmt) 'funcall) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
       (else (error "Invalid statements")))))
 
 (define createFuncLayer
