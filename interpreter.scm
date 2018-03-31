@@ -65,16 +65,7 @@
                                        (or (eq? (getFirst exp) '!)))))))))) (M_value (M_bool exp state) state))
       (else (error "unknown operator")))))
 
-(define createFuncLayer
-  (lambda (paramlis inputlis state)
-    (cond
-      ((null? paramlis) state)
-      ((null? (getAfterFirst paramlis)) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))
-      (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
-    
-(define createBinding
-  (lambda (param input state)
-    (list param (box (M_value input state)))))
+
 
 ;Used this line to test funcall statement:
 ;(M_value '(funcall func1 1 2 3) (M_state_function '(function func1 (a b c) (return (+ (+ a b) c))) '(())))
@@ -183,8 +174,20 @@
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
       ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
+      ((eq? (getFirst stmt) 'funcall) (run (getFourth (lookupfunc (getSecond exp) state)) (createFuncLayer (getThird (lookupfunc (getSecond exp) (addlayer '() state)) (getAfterSecond exp) state) return '() '() '())))
       (else (error "Invalid statements")))))
 
+(define createFuncLayer
+  (lambda (paramlis inputlis state)
+    (cond
+      ((null? paramlis) state)
+      ((null? (getAfterFirst paramlis)) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))
+      (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
+    
+(define createBinding
+  (lambda (param input state)
+    (list param (box (M_value input state)))))
+    
 ; abstraction
 (define tryBody getSecond)
 (define catchBody getThird)
