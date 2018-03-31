@@ -8,8 +8,8 @@
   (lambda (filename)
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
-      (else (
-          (call/cc (lambda (return) (M_state_funcall '(funcall main)(run (parser filename) M_state_nullState return '() '() '()))))))))
+      (else (lookupvar 'M_state_return
+          (call/cc (lambda (return) (M_state_funcall '(funcall main) (run (parser filename) M_state_nullState '() '() '() '()) return '() '() '()))))))))
 
 
 ; abstractions
@@ -290,6 +290,7 @@
       ((null? state) (error "Function not defined!"))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
        (assq 'function (topLayer state)))
+      ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
 
 ; defining a function that finds the binding of the variable in state
