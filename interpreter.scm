@@ -52,7 +52,8 @@
       ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) 'funcall) ())
+      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return 
+          (call/cc (lambda (return) (run (getFourth (lookupfunc (getSecond exp))) (createFuncLayer (getThird (lookupfunc (getSecond exp))) (getAfterSecond exp) state) return '() '() '())))))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -63,6 +64,17 @@
                                    (or (eq? (getFirst exp) '||)
                                        (or (eq? (getFirst exp) '!)))))))))) (M_value (M_bool exp state) state))
       (else (error "unknown operator")))))
+
+(define createFuncLayer
+  (lambda (paramlis inputlis state)
+    (cond
+      ((null? paramlis) state)
+      ((null? (getAfterFirst paramlis)) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))
+      (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
+    
+(define createBinding
+  (lambda (param input state)
+    (list param (box (lookupvar input state)))))
 
 ; defining a function for assignment so that it returns a state after the assignment
 ; used box, defined (var (box)) as a binding
