@@ -259,6 +259,13 @@
          (unbox (getSecond (findvar var state)))
          ((error "Variable not declared!")))))
 
+; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
+(define declareLocalVar
+  (lambda (binding state)
+    (cond 
+      ((assq (key binding) (topLayer state)) (error "Local variable already declared!"))
+      (else (M_state_Declaration_updateBinding binding state)))))
+
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
