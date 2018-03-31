@@ -21,6 +21,7 @@
 (define getAfterThird cdddr)
 (define getFourth cadddr)
 
+(define add cons)
 (define addlayer cons)
 (define emptyLayer '())
 (define poplayer cdr)
@@ -154,7 +155,7 @@
 ; defining a function that returns the state after storing a function
 (define M_state_function
   (lambda (func state)
-    (M_state_Declaration_updateBinding func state)))
+    (M_state_Declaration_function func state)))
     
 
 (define returnit (lambda(v) v))
@@ -239,6 +240,11 @@
     (cond
        ((assq (key binding) (topLayer state)) (error "Variable already declared"))
        (else (cons (addBinding binding (topLayer state)) (getAfterFirst state))))))
+
+; defining a function that declares functions
+(define M_state_Declaration_function
+  (lambda (function state)
+    (add (add function (topLayer state)) (getAfterFirst state))))
 
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
