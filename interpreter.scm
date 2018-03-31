@@ -8,8 +8,8 @@
   (lambda (filename)
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
-      (else (lookupvar 'M_state_return 
-          (call/cc (lambda (return) (run (parser filename) M_state_nullState return '() '() '()))))))))
+      (else (
+          (call/cc (lambda (return) (M_state_funcall '(funcall main)(run (parser filename) M_state_nullState return '() '() '()))))))))
 
 
 ; abstractions
@@ -191,7 +191,7 @@
     
 (define createBinding
   (lambda (param input state)
-    (list param (box (M_value input state)))))
+    (list param (box (M_value input (poplayer state))))))
     
 ; abstraction
 (define tryBody getSecond)
