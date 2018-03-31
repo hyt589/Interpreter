@@ -52,6 +52,7 @@
       ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state) (M_value (getThird exp) state)))
+      ((eq? (getFirst exp) 'funcall) ())
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -148,7 +149,6 @@
   (lambda (func state)
     (M_state_Declaration_updateBinding func state)))
     
-    
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
@@ -166,7 +166,7 @@
       ((eq? (getFirst stmt) 'continue) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'continue) state)))
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
       ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) 'function) (M_state_function (getAfterFirst stmt) state))
+      ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
       (else (error "Invalid statements")))))
 
 ; abstraction
@@ -246,6 +246,15 @@
      (if (findvar var state)
          (unbox (getSecond (findvar var state)))
          ((error "Variable not declared!")))))
+
+; defining a function that returns a function if defined or an error msg if not
+(define lookupfunc
+  (lambda (name state)
+    (cond
+      ((null? state) (error "Function not defined!"))
+      ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
+       (assq 'function (topLayer state)))
+      (else (lookupfunc name (getAfterFirst state))))))
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
