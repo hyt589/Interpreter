@@ -53,7 +53,7 @@
       ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state) (M_value (getThird exp) state)))
       ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return 
-          (call/cc (lambda (return) (run (getFourth (lookupfunc (getSecond exp))) (createFuncLayer (getThird (lookupfunc (getSecond exp))) (getAfterSecond exp) state) return '() '() '())))))
+          (call/cc (lambda (return) (run (getFourth (lookupfunc (getSecond exp) state)) (createFuncLayer (getThird (lookupfunc (getSecond exp) state)) (getAfterSecond exp) state) return '() '() '())))))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -74,7 +74,11 @@
     
 (define createBinding
   (lambda (param input state)
-    (list param (box (lookupvar input state)))))
+    (list param (box (M_value input state)))))
+
+;Used this line to test funcall statement:
+;(M_value '(funcall func1 1 2 3) (M_state_function '(function func1 (a b c) (return (+ (+ a b) c))) '(())))
+;it returned 6, which is expected
 
 ; defining a function for assignment so that it returns a state after the assignment
 ; used box, defined (var (box)) as a binding
