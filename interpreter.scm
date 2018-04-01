@@ -201,6 +201,7 @@
       ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt state funcreturn whileReturn throwReturn breakReturn))))
       (else (error "Invalid statements")))))
 
+; this function creates a proper new layer for the function call
 (define createFuncLayer
   (lambda (paramlis inputlis state)
     (cond
@@ -210,18 +211,21 @@
       (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding
                                                                                 (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
 
+;this function checks whether the input list matches the param list of the function called
 (define paramMismatch
   (lambda (l1 l2)
     (cond
       ((not (eq? (listLength l1) (listLength l2))) #t)
       (else #f))))
 
+;returns the length of a list(number of elements)
 (define listLength
   (lambda (l)
     (if (null? l)
         0
         (+ 1 (listLength (cdr l))))))
 
+;bind each parameter with its respective input value
 (define createBinding
   (lambda (param input state)
     (cond
