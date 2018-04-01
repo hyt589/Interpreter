@@ -161,6 +161,7 @@
   (lambda (funcallstat state return whileReturn throwReturn breakReturn)
     (cond
       ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
     
 
