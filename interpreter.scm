@@ -9,7 +9,10 @@
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return
-          (call/cc (lambda (return) (M_state_funcall '(funcall main) (run (parser filename) M_state_nullState '() '() '() '()) return '() '() '()))))))))
+                       (call/cc (lambda (return)
+                                  (M_state_funcall '(funcall main)
+                                                   (run (parser filename) M_state_nullState '() '() '() '())
+                                                   return '() '() '()))))))))
 
 
 ; abstractions
@@ -125,7 +128,9 @@
     (cond
       ((null? stmtlis) (cpsreturn state))
       ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn)))
-      (else (cpsreturn (run-cps (getAfterFirst stmtlis) (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn))))))
+      (else (cpsreturn (run-cps (getAfterFirst stmtlis)
+                                (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn)
+                                return whileReturn throwReturn breakReturn cpsreturn))))))
 
 ; defining a wrapper for run-cps
 (define run
@@ -138,13 +143,15 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn cpsreturn)
     (cond
       ((definedInTopBinding (bind 'gotype 'break) state) (cpsreturn state))
-      ((M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn) (cpsreturn (M_state_while-cps stmt (run (getAfterSecond stmt) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn)))
+      ((M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn) (cpsreturn (M_state_while-cps stmt
+                                                                                                                (run (getAfterSecond stmt) state return whileReturn throwReturn breakReturn)
+                                                                                                                return whileReturn throwReturn breakReturn cpsreturn)))
       (else (cpsreturn state)))))
 
 ; defining a function that returns boolean indicating whether the binding defined in top layer
 (define definedInTopBinding
   (lambda (binding state)
-   (equal? (assq (key binding) (topLayer state)) binding)))
+    (equal? (assq (key binding) (topLayer state)) binding)))
 
 ;defining a wrapper for while-cps
 (define M_state_while
@@ -174,10 +181,18 @@
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state return whileReturn throwReturn breakReturn))))
+      
+      ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block")
+                                         (throwReturn (M_state_throw stmt state return whileReturn throwReturn breakReturn))))
+      
       ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) 'while) (returnit (call/cc (lambda (breakReturn) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
-      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
+      ((eq? (getFirst stmt) 'while) (returnit
+                                     (call/cc (lambda (breakReturn)
+                                                (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
+      ((eq? (getFirst stmt) 'begin)  (poplayer
+                                      (call/cc (lambda (whileReturn)
+                                                 (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
+      
       ((eq? (getFirst stmt) 'continue) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'continue) state)))
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
       ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
@@ -192,7 +207,8 @@
       ((paramMismatch paramlis inputlis) (error "Arity mismatch!"))
       ((null? paramlis) state)
       ((null? (getAfterFirst paramlis)) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))
-      (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
+      (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding
+                                                                                (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
 
 (define paramMismatch
   (lambda (l1 l2)
@@ -221,12 +237,12 @@
 ; defining a function for catch so that returns a state after catch
 (define M_state_catch
   (lambda (stmt state return whileReturn throwReturn breakReturn)
-     (if (null? stmt) state
+    (if (null? stmt) state
         (if (equal? (lookupvar 'throw state) 'none)
             state
             (run (catchBody stmt) 
-                (M_state_Declaration_updateBinding (bind (catchVar stmt) (lookupvar 'throw state)) state)
-                return whileReturn throwReturn breakReturn)))))
+                 (M_state_Declaration_updateBinding (bind (catchVar stmt) (lookupvar 'throw state)) state)
+                 return whileReturn throwReturn breakReturn)))))
 
 ; abstraction
 (define finalStmt getSecond)
@@ -236,17 +252,19 @@
 ; defining a function for finally so that returns a state after finally
 (define M_state_final
   (lambda (stmt state return whileReturn throwReturn breakReturn)
-      (if (null? stmt) state
+    (if (null? stmt) state
         (run (finalStmt stmt) state return whileReturn throwReturn breakReturn))))
 
 ; defining a function for try statement so that it returns a state after try statement
 (define M_state_try
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (M_state_final (finalBody stmt)
-    (M_state_catch (catchBody stmt)   (call/cc (lambda (throwReturn) 
-                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state) return whileReturn throwReturn breakReturn)))
-                   return whileReturn throwReturn breakReturn)
-             return whileReturn throwReturn breakReturn)))
+                   (M_state_catch (catchBody stmt)
+                                  (call/cc (lambda (throwReturn) 
+                                             (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state)
+                                                  return whileReturn throwReturn breakReturn)))
+                                  return whileReturn throwReturn breakReturn)
+                   return whileReturn throwReturn breakReturn)))
 
 
 
@@ -275,10 +293,10 @@
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn)
     (cond
-       ((null? state) (cpsreturn (error "Variable not declared")))
-       ;if the variable is already declared, update the box
-       ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
-       (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
+      ((null? state) (cpsreturn (error "Variable not declared")))
+      ;if the variable is already declared, update the box
+      ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
+      (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
 
 ; if the box has been updated, return the state
 (define updateBox
@@ -293,11 +311,11 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-     (if (findvar var state)
-         (if (box? (getSecond (findvar var state)))
-             (unbox (getSecond (findvar var state)))
-             (getSecond (findvar var state)))
-         ((error "Variable not declared!")))))
+    (if (findvar var state)
+        (if (box? (getSecond (findvar var state)))
+            (unbox (getSecond (findvar var state)))
+            (getSecond (findvar var state)))
+        ((error "Variable not declared!")))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
 (define declareLocalVar
@@ -320,9 +338,9 @@
 (define findvar-cps
   (lambda (var state cpsreturn)
     (cond
-       ((null? state) (cpsreturn #f))
-       ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
-       (else (cpsreturn (findvar-cps var (getAfterFirst state) cpsreturn))))))
+      ((null? state) (cpsreturn #f))
+      ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
+      (else (cpsreturn (findvar-cps var (getAfterFirst state) cpsreturn))))))
 
 ; defining a wrapper for findvar-cps
 (define findvar
