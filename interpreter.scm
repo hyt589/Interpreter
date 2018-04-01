@@ -36,7 +36,7 @@
 (define M_state_declaration
   (lambda (dec state)
     (cond
-      ((null? (getAfterSecond dec)) (M_state_Declaration_updateBinding (getAfterFirst dec) state))
+      ((null? (getAfterSecond dec)) (M_state_Declaration_updateBinding (bind (getSecond dec) (box null)) state))
       (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) state))) state)))))
 
 ; defining a function that returns the value of an expression
@@ -173,7 +173,7 @@
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state)))
-      ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state ))))
+      ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state))))
       ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'while) (returnit (call/cc (lambda (breakReturn) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
       ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
@@ -275,7 +275,9 @@
 (define lookupvar
   (lambda (var state)
      (if (findvar var state)
-         (unbox (getSecond (findvar var state)))
+         (if (box? (getSecond (findvar var state)))
+             (unbox (getSecond (findvar var state)))
+             (getSecond (findvar var state)))
          ((error "Variable not declared!")))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
