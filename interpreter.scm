@@ -82,7 +82,7 @@
   (lambda (stmt state)
     (cond
       ((null? (getSecond stmt)) (error "Nothing to M_state_return"))
-      (else (M_state_Declaration_updateBinding (bind 'M_state_return (box (M_value (getSecond stmt) state))) state)))))
+      (else (M_state_Declaration_updateBinding (bind 'M_state_return (box (M_value (getSecond stmt) state))) (poplayer state))))))
 
 ; defining a function for throw so that returns a state after throw
 (define M_state_throw
@@ -159,7 +159,9 @@
 ; defining a function that returns the state after running a function
 (define M_state_funcall
   (lambda (funcallstat state return whileReturn throwReturn breakReturn)
-    (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn)))
+    (cond
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
+      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() (cdr state))) return whileReturn throwReturn breakReturn)))))
     
 
 (define returnit (lambda(v) v))
