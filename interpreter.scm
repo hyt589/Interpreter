@@ -187,10 +187,23 @@
 (define createFuncLayer
   (lambda (paramlis inputlis state)
     (cond
+      ((paramMismatch paramlis inputlis) (error "Arity mismatch!"))
       ((null? paramlis) state)
       ((null? (getAfterFirst paramlis)) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))
       (else (createFuncLayer (getAfterFirst paramlis) (getAfterFirst inputlis) (M_state_Declaration_updateBinding (createBinding (getFirst paramlis) (getFirst inputlis) state) state))))))
-    
+
+(define paramMismatch
+  (lambda (l1 l2)
+    (cond
+      ((not (eq? (listLength l1) (listLength l2))) #t)
+      (else #f))))
+
+(define listLength
+  (lambda (l)
+    (if (null? l)
+        0
+        (+ 1 (listLength (cdr l))))))
+
 (define createBinding
   (lambda (param input state)
     (list param (box (M_value input (poplayer state))))))
