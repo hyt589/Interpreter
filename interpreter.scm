@@ -46,6 +46,8 @@
       ((number? exp) exp)
       ((eq? exp '#t) 'true)
       ((eq? exp '#f) 'false)
+      ((eq? exp 'true) 'true)
+      ((eq? exp 'false) 'false)
       ((symbol? exp) (lookupvar exp state))
       ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state)))
       ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state) (M_value (getThird exp) state)))
@@ -109,6 +111,7 @@
       ((eq? (getFirst stmt) '&&) (and (M_bool (getSecond stmt) state) (M_bool (getThird stmt) state)))
       ((eq? (getFirst stmt) '||) (or (M_bool (getSecond stmt) state) (M_bool (getThird stmt) state)))
       ((eq? (getFirst stmt) '!) (not (M_bool (getSecond stmt) state)))
+      ((eq? (getFirst stmt) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall stmt state return '() '() '())))))
       (else (error "Invalid conditional statement!")))))
 
 ; defining a function that returns a state after an if statement
@@ -206,7 +209,10 @@
 
 (define createBinding
   (lambda (param input state)
-    (list param (box (M_value input (poplayer state))))))
+    (cond
+      ((eq? input 'true) (list param (box 'true)))
+      ((eq? input 'false) (list param (box 'false)))
+      (else (list param (box (M_value input (poplayer state))))))))
     
 ; abstraction
 (define tryBody getSecond)
