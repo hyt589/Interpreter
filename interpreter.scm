@@ -101,6 +101,8 @@
       ((null? stmt) (error "Conditional statement needed!"))
       ((eq? stmt 'true) '#t)
       ((eq? stmt 'false) '#f)
+      ((eq? stmt '#t) '#t)
+      ((eq? stmt '#f) '#f)
       ((symbol? stmt) (M_bool (lookupvar stmt state) state))
       ((eq? (getFirst stmt) '==) (= (M_value (getSecond stmt) state) (M_value (getThird stmt) state)))
       ((eq? (getFirst stmt) '<) (< (M_value (getSecond stmt) state) (M_value (getThird stmt) state)))
