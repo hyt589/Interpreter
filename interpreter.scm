@@ -225,7 +225,7 @@
         (if (equal? (lookupvar 'throw state) 'none)
             state
             (run (catchBody stmt) 
-                (M_state_Declaration_updateBinding (bind (catchVar stmt) (lookupvar 'throw state)) state)
+                (M_state_Declaration_updateBinding (bind (catchVar stmt) (lookupvar 'throw state)) (cdr state))
                 return whileReturn throwReturn breakReturn)))))
 
 ; abstraction
