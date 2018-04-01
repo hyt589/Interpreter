@@ -68,11 +68,6 @@
       (else (error "unknown operator")))))
 
 
-
-;Used this line to test funcall statement:
-;(M_value '(funcall func1 1 2 3) (M_state_function '(function func1 (a b c) (return (+ (+ a b) c))) '(())))
-;it returned 6, which is expected
-
 ; defining a function for assignment so that it returns a state after the assignment
 ; used box, defined (var (box)) as a binding
 (define M_state_assignment
@@ -186,7 +181,8 @@
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
       ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
-      ((eq? (getFirst stmt) 'funcall) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
+      ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt state funcreturn whileReturn throwReturn breakReturn))))
       (else (error "Invalid statements")))))
 
 (define createFuncLayer
@@ -265,8 +261,9 @@
 (define M_state_Declaration_updateBinding
   (lambda (binding state)
     (cond
-       ((assq (key binding) (topLayer state)) (error "Variable already declared"))
-       (else (cons (addBinding binding (topLayer state)) (getAfterFirst state))))))
+      ((eq? (key binding) 'M_state_return) (cons (addBinding binding (topLayer state)) (getAfterFirst state)))
+      ((assq (key binding) (topLayer state)) (error "Variable already declared"))
+      (else (cons (addBinding binding (topLayer state)) (getAfterFirst state))))))
 
 ; defining a function that declares functions
 (define M_state_Declaration_function
@@ -330,13 +327,6 @@
 (define findvar
   (lambda (var state)
     (findvar-cps var state (lambda(v) v))))
-
-
-; Used this line to test whether updateBinding is updating the boxes correctly
-; (lookupvar 'x (M_state_Assignment_updateBinding (list 'x (box '6)) (M_state_Declaration_updateBinding (list 'x (box '3)) '(()))))
-; x is initialized as 3 and the updateBinding updates x with a value of 6 and return the state,
-; we then lookupvar x to see if the value of x has changed.
-; the above line returns 6, so it works, I think...
 
 
 
