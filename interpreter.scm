@@ -34,10 +34,10 @@
 
 ; defining a function for variable declaration so that it returns the state after the declaration statement
 (define M_state_declaration
-  (lambda (dec state)
+  (lambda (dec state return whileReturn throwReturn breakReturn)
     (cond
       ((null? (getAfterSecond dec)) (M_state_Declaration_updateBinding (bind (getSecond dec) (box null)) state))
-      (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) state '() '() '() '()))) state)))))
+      (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) state return whileReturn throwReturn breakReturn))) state)))))
 
 ; defining a function that returns the value of an expression
 (define M_value
@@ -49,13 +49,13 @@
       ((eq? exp 'true) 'true)
       ((eq? exp 'false) 'false)
       ((symbol? exp) (lookupvar exp state))
-      ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state)))
-      ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state) (M_value (getThird exp) state)))
-      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp state return whileReturn thorwReturn breakReturn)))))
+      ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp state return whileReturn throwReturn breakReturn)))))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -76,22 +76,22 @@
 ; defining a function for assignment so that it returns a state after the assignment
 ; used box, defined (var (box)) as a binding
 (define M_state_assignment
-  (lambda (asg state)
-    (M_state_Assignment_updateBinding (bind (getSecond asg) (box (M_value (getThird asg) state '() '() '() '()))) state)))
+  (lambda (asg state return whileReturn throwReturn breakReturn)
+    (M_state_Assignment_updateBinding (bind (getSecond asg) (box (M_value (getThird asg) state return whileReturn throwReturn breakReturn))) state)))
 
 ; defining a function for the return whileReturn throwReturn statement that returns the value of the expression being returned
 (define M_state_return
-  (lambda (stmt state)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? (getSecond stmt)) (error "Nothing to M_state_return"))
-      (else (M_state_Declaration_updateBinding (bind 'M_state_return (box (M_value (getSecond stmt) state '() '() '() '()))) (poplayer state))))))
+      (else (M_state_Declaration_updateBinding (bind 'M_state_return (box (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn))) (poplayer state))))))
 
 ; defining a function for throw so that returns a state after throw
 (define M_state_throw
-  (lambda (stmt state)
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? (getSecond stmt)) (error "Nothing to M_state_throw"))
-      (else (M_state_Assignment_updateBinding (bind 'throw (box (M_value (getSecond stmt) state '() '() '() '()))) state)))))
+      (else (M_state_Assignment_updateBinding (bind 'throw (box (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn))) state)))))
 
 
 ; defining a function that returns a boolean based on the input statement
@@ -175,10 +175,10 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? stmt) state)
-      ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state))
-      ((eq? (getFirst stmt) '=) (M_state_assignment stmt state))
-      ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state)))
-      ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state))))
+      ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state return whileReturn throwReturn breakReturn))))
       ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'while) (returnit (call/cc (lambda (breakReturn) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
       ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
@@ -247,7 +247,7 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (M_state_final (finalBody stmt)
     (M_state_catch (catchBody stmt)   (call/cc (lambda (throwReturn) 
-                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw 'none) state) return whileReturn throwReturn breakReturn)))
+                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state) return whileReturn throwReturn breakReturn)))
                    return whileReturn throwReturn breakReturn)
              return whileReturn throwReturn breakReturn)))
 
