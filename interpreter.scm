@@ -171,7 +171,7 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? stmt) state)
-      ((eq? (getFirst stmt) 'class) ())
+      ((eq? (getFirst stmt) 'class) (cons (classClosure stmt state return whileReturn throwReturn breakReturn) state))
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
