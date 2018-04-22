@@ -1,4 +1,4 @@
-(require "functionParser.scm")
+(require "classParser.scm")
 
 ;--------------------------------------------------------------------------------------------------------
 ;---------------------------Interpreter Implementation---------------------------------------------------
@@ -171,6 +171,7 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? stmt) state)
+      ((eq? (getFirst stmt) 'class) ())
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
@@ -184,6 +185,7 @@
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
       ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt state funcreturn whileReturn throwReturn breakReturn))))
+      ((eq? (getFirst stmt) 'static) (M_state_function (getAftertFirst stmt) state))
       (else (error "Invalid statements")))))
 
 ; Creates a proper layer of the function call
@@ -333,6 +335,25 @@
   (lambda (var state)
     (findvar-cps var state (lambda(v) v))))
 
+;---------------------------part4----------------------------------
+;------------------------------------------------------------------
+
+(define className getSecond)
+(define superClass caaddr)
+(define classBody getFourth)
+    
+    
+;define a function that returns the closure of a given class
+(define classClosure
+  (lambda (stmt state return whileReturn throwReturn breakReturn)
+    (cond
+      ((and (not (null? (getThird stmt)))(eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn)))
+      (else (list (className stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn))))))
+
+;defien a function that returns the closure of a given function
+
+
+;define a function that returns the closure of a given instance of a class
 
 
 
