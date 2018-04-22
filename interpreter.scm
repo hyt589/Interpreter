@@ -329,7 +329,7 @@
 
 (define lookupmain
   (lambda (global)
-    ((null? global) (error "No main method found"))
+    ((null? global) (error "No main method found"))))
     
 
 ; defining a function that finds the binding of the variable in state
@@ -348,9 +348,15 @@
 ;---------------------------part4----------------------------------
 ;------------------------------------------------------------------
 
+(define cadaddr
+  (lambda (lis)
+    (car (cdaddr lis))))
+
 (define className getSecond)
-(define superClass caaddr)
+(define superClass cadaddr)
 (define classBody getFourth)
+
+
     
     
 ;define a function that returns the closure of a given class
@@ -358,7 +364,7 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((and (not (null? (getThird stmt)))(eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn)))
-      (else (list (className stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn))))))
+      (else (list (className stmt) '() (run (classBody stmt) state return whileReturn throwReturn breakReturn))))))
 
 ;defien a function that returns the closure of a given function
 
