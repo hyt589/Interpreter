@@ -337,13 +337,7 @@
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
-<<<<<<< HEAD
-=======
 
-(define lookupmain
-  (lambda (global)
-    ((null? global) (error "No main method found"))))
->>>>>>> 5b0b33eda5579e14f79be404593afa11d7d06287
     
 
 ; defining a function that finds the binding of the variable in state
