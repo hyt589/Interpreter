@@ -317,6 +317,17 @@
       ((assq (key binding) (topLayer state)) (error "Local variable already declared!"))
       (else (M_state_Declaration_updateBinding binding state)))))
 
+(define getClassName caar)
+(define getClassClosure cadar)
+(define getTailClasses cdr)
+; defining a function that lookup a class and return the class closure
+(define lookupclass
+  (lambda (name state)
+    (cond
+      ((null? state) (error "Class not defined!"))
+      ((eq? (getClassName state) name) (getClassClosure state))
+      (else (lookupclass name (getTailClasses state))))))
+
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
@@ -326,10 +337,6 @@
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
-
-(define lookupmain
-  (lambda (global)
-    ((null? global) (error "No main method found"))
     
 
 ; defining a function that finds the binding of the variable in state

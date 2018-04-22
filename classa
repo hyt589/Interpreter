@@ -1,5 +1,10 @@
 class A {
+  var x = 5;
+  
   static function main() {
     return 5;
+  }
+  function test() {
+    return 3;
   }
 }
