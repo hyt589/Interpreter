@@ -171,7 +171,7 @@
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
       ((null? stmt) state)
-      ((eq? (getFirst stmt) 'class) (cons (classClosure stmt state return whileReturn throwReturn breakReturn) state))
+      ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state return whileReturn throwReturn breakReturn) state))
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
@@ -277,6 +277,11 @@
   (lambda (function state)
     (add (add function (topLayer state)) (getAfterFirst state))))
 
+; defining a class that decalres classes
+(define M_state_Declaration_class
+  (lambda (class global)
+    (append (add class (topLayer global)) (getAfterFirst global))))
+
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn)
@@ -321,6 +326,11 @@
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
+
+(define lookupmain
+  (lambda (global)
+    ((null? global) (error "No main method found"))
+    
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
