@@ -185,7 +185,7 @@
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
       ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt state funcreturn whileReturn throwReturn breakReturn))))
-      ((eq? (getFirst stmt) 'static) (M_state_function (getAftertFirst stmt) state))
+      ((eq? (getFirst stmt) 'static-function) (M_state_function (getAfterFirst stmt) state))
       (else (error "Invalid statements")))))
 
 ; Creates a proper layer of the function call
