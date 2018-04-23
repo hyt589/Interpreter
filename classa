@@ -8,3 +8,9 @@ class A {
     return 3;
   }
 }
+
+class B {
+  function testb() {
+    return 4;
+  }
+}

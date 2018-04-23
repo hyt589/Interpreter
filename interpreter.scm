@@ -169,6 +169,7 @@
 ;defining a function that returns a state after a statement
 (define M_state
   (lambda (stmt state return whileReturn throwReturn breakReturn)
+    ;(display state) (newline)
     (cond
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state return whileReturn throwReturn breakReturn) state))
@@ -277,10 +278,11 @@
   (lambda (function state)
     (add (add function (topLayer state)) (getAfterFirst state))))
 
-; defining a class that decalres classes
+; defining a class that declares classes
 (define M_state_Declaration_class
-  (lambda (class global)
-    (append (add class (topLayer global)) (getAfterFirst global))))
+  (lambda (class state)
+    ;(display class) (newline)
+    (add (add class (topLayer state)) (getAfterFirst state))))
 
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
@@ -318,14 +320,15 @@
       (else (M_state_Declaration_updateBinding binding state)))))
 
 (define getClassName caar)
-(define getClassClosure cadar)
+(define getClassClosure caaddr)
 (define getTailClasses cdr)
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
+    (display (getClassName state)) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
-      ((eq? (getClassName state) name) (getClassClosure state))
+      ((eq? (getClassName state) name) (getClassClosure (getFirst state)))
       (else (lookupclass name (getTailClasses state))))))
 
 ; defining a function that returns a function if defined or an error msg if not
@@ -337,14 +340,6 @@
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
-<<<<<<< HEAD
-=======
-
-(define lookupmain
-  (lambda (global)
-    ((null? global) (error "No main method found"))))
->>>>>>> 5b0b33eda5579e14f79be404593afa11d7d06287
-    
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
@@ -377,8 +372,8 @@
 (define classClosure
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
-      ((and (not (null? (getThird stmt)))(eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn)))
-      (else (list (className stmt) '() (run (classBody stmt) state return whileReturn throwReturn breakReturn))))))
+      ((and (not (null? (getThird stmt)))(eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn)))
+      (else (list (className stmt) '() (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn))))))
 
 ;defien a function that returns the closure of a given function
 
