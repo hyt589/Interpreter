@@ -339,6 +339,11 @@
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
+<<<<<<< HEAD
+=======
+
+    
+>>>>>>> 06a858e63831fabaa5ff4e9fa2d2b986b2f5bd6e
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
