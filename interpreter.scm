@@ -325,7 +325,6 @@
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
-    (display (getClassName state)) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
       ((eq? (getClassName state) name) (getClassClosure (getFirst state)))
