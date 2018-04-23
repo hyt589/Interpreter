@@ -4,13 +4,4 @@ class A {
   static function main() {
     return 5;
   }
-  function test() {
-    return 3;
-  }
-}
-
-class B {
-  function testb() {
-    return 4;
-  }
 }

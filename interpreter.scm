@@ -5,11 +5,11 @@
 
 ; defining a function that takes an input file to be executed and returns a value
 (define interpret
-  (lambda (filename)
+  (lambda (filename classname)
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return
-          (call/cc (lambda (return) (M_state_funcall '(funcall main) (run (parser filename) M_state_nullState '() '() '() '()) return '() '() '()))))))))
+          (call/cc (lambda (return) (M_state_funcall '(funcall main) (lookupclass classname (run (parser filename) M_state_nullState '() '() '() '())) return '() '() '()))))))))
 
 
 ; abstractions
@@ -186,7 +186,7 @@
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
       ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt state funcreturn whileReturn throwReturn breakReturn))))
-      ((eq? (getFirst stmt) 'static-function) (M_state_function (getAfterFirst stmt) state))
+      ((eq? (getFirst stmt) 'static-function) (M_state_function (cons 'function (getAfterFirst stmt)) state))
       (else (error "Invalid statements")))))
 
 ; Creates a proper layer of the function call
@@ -319,31 +319,27 @@
       ((assq (key binding) (topLayer state)) (error "Local variable already declared!"))
       (else (M_state_Declaration_updateBinding binding state)))))
 
-(define getClassName caar)
-(define getClassClosure caaddr)
+(define getClassName caaar)
+(define getClassClosure caddr)
 (define getTailClasses cdr)
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
     (cond
       ((null? state) (error "Class not defined!"))
-      ((eq? (getClassName state) name) (getClassClosure (getFirst state)))
+      ((eq? (getClassName state) name) (getClassClosure (caar state)))
       (else (lookupclass name (getTailClasses state))))))
 
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
+    (display state) (newline)
     (cond
       ((null? state) (error "Function not defined!"))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
       (else (lookupfunc name (getAfterFirst state))))))
-<<<<<<< HEAD
-=======
-
-    
->>>>>>> 06a858e63831fabaa5ff4e9fa2d2b986b2f5bd6e
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
