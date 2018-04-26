@@ -332,8 +332,7 @@
 
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
-  (lambda (name state)
-    (display state) (newline)
+  (lambda (name state)3
     (cond
       ((null? state) (error "Function not defined!"))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
