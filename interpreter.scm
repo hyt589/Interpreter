@@ -10,8 +10,7 @@
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return
-          (call/cc (lambda (return) (M_state_funccall '(funcall main) classname (list (list (lookupclass classname (run (parser filename) M_state_nullState '() '() '() '())))) return '() '() '()))))))))
-
+          (call/cc (lambda (return) (M_state_funcall '(funcall main) classname (list (list (lookupclass classname (run (parser filename) classname M_state_nullState '() '() '() '())))) return '() '() '()))))))))
 
 ; abstractions
 (define getFirst car)
@@ -124,16 +123,16 @@
 
 ; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
 (define run-cps
-  (lambda (stmtlis state return whileReturn throwReturn breakReturn cpsreturn)
+  (lambda (stmtlis type state return whileReturn throwReturn breakReturn cpsreturn)
     (cond
       ((null? stmtlis) (cpsreturn state))
-      ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn)))
-      (else (cpsreturn (run-cps (getAfterFirst stmtlis) (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn))))))
+      ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) type state return whileReturn throwReturn breakReturn)))
+      (else (cpsreturn (run-cps (getAfterFirst stmtlis) type (M_state (getFirst stmtlis) type state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn))))))
 
 ; defining a wrapper for run-cps
 (define run
-  (lambda (stmtlis state return whileReturn throwReturn breakReturn)
-    (run-cps stmtlis state return whileReturn throwReturn breakReturn (lambda (v) v))))
+  (lambda (stmtlis type state return whileReturn throwReturn breakReturn)
+    (run-cps stmtlis type state return whileReturn throwReturn breakReturn (lambda (v) v))))
 
 ;defining a function that returns a state after a while statement
 (define M_state_while-cps
@@ -161,18 +160,18 @@
 
 ; defining a function that returns the state after running a function
 (define M_state_funcall
-  (lambda (funcallstat state type return whileReturn throwReturn breakReturn)
+  (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
     ;(display state) (newline)
     (cond
-      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
-      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
-      (else (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
+      (else (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
 (define M_state
-  (lambda (stmt state type return whileReturn throwReturn breakReturn)
-    ;(display state) (newline)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
+    (display state) (newline)
     (cond
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
