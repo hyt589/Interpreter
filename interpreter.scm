@@ -3,13 +3,14 @@
 ;--------------------------------------------------------------------------------------------------------
 ;---------------------------Interpreter Implementation---------------------------------------------------
 
+(define getFunctions cdddr)
 ; defining a function that takes an input file to be executed and returns a value
 (define interpret
   (lambda (filename classname)
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return
-          (call/cc (lambda (return) (M_state_funcall '(funcall main) (lookupclass classname (run (parser filename) M_state_nullState '() '() '() '())) return '() '() '()))))))))
+          (call/cc (lambda (return) (M_state_funcall '(funcall main) (getFunctions (lookupclass classname (run (parser filename) M_state_nullState '() '() '() '()))) return '() '() '()))))))))
 
 
 ; abstractions
@@ -50,6 +51,7 @@
       ((eq? exp 'true) 'true)
       ((eq? exp 'false) 'false)
       ((symbol? exp) (lookupvar exp state))
+      ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
       ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
@@ -57,7 +59,6 @@
       ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp state return whileReturn throwReturn breakReturn)))))
-      ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -134,7 +135,6 @@
   (lambda (stmtlis state return whileReturn throwReturn breakReturn)
     (run-cps stmtlis state return whileReturn throwReturn breakReturn (lambda (v) v))))
 
-
 ;defining a function that returns a state after a while statement
 (define M_state_while-cps
   (lambda (stmt state return whileReturn throwReturn breakReturn cpsreturn)
@@ -165,7 +165,6 @@
       ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
       ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
-    
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
@@ -174,7 +173,7 @@
     ;(display state) (newline)
     (cond
       ((null? stmt) state)
-      ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state return whileReturn throwReturn breakReturn) state))
+      ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
@@ -322,7 +321,7 @@
 
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
-  (lambda (name state)3
+  (lambda (name state)
     (cond
       ((null? state) (error "Function not defined!"))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
@@ -350,38 +349,64 @@
   (lambda (lis)
     (car (cdaddr lis))))
 
-(define className getSecond)
-(define superClass cadaddr)
-(define classBody getFourth)
+(define getName getSecond)
+(define getSuperClass getThird)
+(define getBody getFourth)
+(define combine cons)
 ;define a function that returns the closure of a given class
-;the parent class, list of instance fields, list of methods/function names and closures
+;parent class, list of instance fields, list of methods/function names and closures
 (define classClosure
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt state)
+    ;(display stmt) (newline)
+    (list (getName stmt) (getSuperClass stmt) (parseFields (getBody stmt)) (parseFunctions (getBody stmt)))))
+ 
+;define a function that parses the superclass
+(define parseSuperClass
+  (lambda (superclass)
     (cond
-      ((and (not (null? (getThird stmt))) (eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn)))
-      (else (list (className stmt) '() (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn))))))
+      ((null? superclass) '())
+      ((eq? (getFirst superclass) 'extends) (getSecond superclass))
+      (else (error "Superclass format error!")))))
 
-;define a function that returns the closure of a given function
+(define getType car)
+(define add cons)
+(define getTail cdr)
+;define a function that parses all the fields in a class and returns a list of them
+(define parseFields
+  (lambda (body)
+    (cond
+      ((null? body) '())
+      ((eq? (getType (getFirst body)) 'var) (add (getFirst body) (parseFields (getTail body))))
+      (else (parseFields (getTail body))))))
+
+;define a function that prases all the functions in a class and returns a list of them
+(define parseFunctions
+  (lambda (body)
+    (cond
+      ((null? body) '())
+      ((or (eq? (getType (getFirst body)) 'function) (eq? (getType (getFirst body)) 'static-function))
+              (add (add 'function (getAfterFirst (getFirst body))) (parseFunctions (getTail body))))
+      (else (parseFunctions (getTail body))))))
 
 
+(define getFields getThird)
+(define combine list)
 ;define a function that returns the closure of a given instance of a class
 ;instance closure: instance's class and a list of instance field values
 (define instanceClosure
   (lambda (class state)
-    (cons class (lookupclass class state))))
-
-
+    (combine class (getFields (lookupclass class state)))))
 
 (define getClassName caaar)
-(define getClassClosure caddr)
+(define getClass caar)
 (define getTailClasses cdr)
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
-    (display state) (newline)
+    ;(display state) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
-      ((eq? (getClassName state) name) (getClassClosure (caar state)))
+      ((eq? (getClassName state) name) (getClass state))
       (else (lookupclass name (getTailClasses state))))))
 
 
