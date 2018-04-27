@@ -39,6 +39,7 @@
       ((null? (getAfterSecond dec)) (M_state_Declaration_updateBinding (bind (getSecond dec) (box null)) state))
       (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) state return whileReturn throwReturn breakReturn))) state)))))
 
+(define bind cons)
 ; defining a function that returns the value of an expression
 (define M_value
   (lambda (exp state return whileReturn throwReturn breakReturn)
@@ -56,6 +57,7 @@
       ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp state return whileReturn throwReturn breakReturn)))))
+      ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -281,7 +283,6 @@
 ; defining a class that declares classes
 (define M_state_Declaration_class
   (lambda (class state)
-    ;(display class) (newline)
     (add (add class (topLayer state)) (getAfterFirst state))))
 
 ; defining a function that updates the bindings in a given state in a assignment statement
@@ -307,9 +308,9 @@
 (define lookupvar
   (lambda (var state)
      (if (findvar var state)
-         (if (box? (getSecond (findvar var state)))
-             (unbox (getSecond (findvar var state)))
-             (getSecond (findvar var state)))
+         (if (box? (getAfterFirst (findvar var state)))
+             (unbox (getAfterFirst (findvar var state)))
+             (getAfterFirst (findvar var state)))
          ((error "Variable not declared!")))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
@@ -318,17 +319,6 @@
     (cond 
       ((assq (key binding) (topLayer state)) (error "Local variable already declared!"))
       (else (M_state_Declaration_updateBinding binding state)))))
-
-(define getClassName caaar)
-(define getClassClosure caddr)
-(define getTailClasses cdr)
-; defining a function that lookup a class and return the class closure
-(define lookupclass
-  (lambda (name state)
-    (cond
-      ((null? state) (error "Class not defined!"))
-      ((eq? (getClassName state) name) (getClassClosure (caar state)))
-      (else (lookupclass name (getTailClasses state))))))
 
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
@@ -363,22 +353,36 @@
 (define className getSecond)
 (define superClass cadaddr)
 (define classBody getFourth)
-
-
-    
-    
 ;define a function that returns the closure of a given class
+;the parent class, list of instance fields, list of methods/function names and closures
 (define classClosure
   (lambda (stmt state return whileReturn throwReturn breakReturn)
     (cond
-      ((and (not (null? (getThird stmt)))(eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn)))
+      ((and (not (null? (getThird stmt))) (eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn)))
       (else (list (className stmt) '() (run (classBody stmt) '(()) return whileReturn throwReturn breakReturn))))))
 
-;defien a function that returns the closure of a given function
+;define a function that returns the closure of a given function
 
 
 ;define a function that returns the closure of a given instance of a class
+;instance closure: instance's class and a list of instance field values
+(define instanceClosure
+  (lambda (class state)
+    (cons class (lookupclass class state))))
 
+
+
+(define getClassName caaar)
+(define getClassClosure caddr)
+(define getTailClasses cdr)
+; defining a function that lookup a class and return the class closure
+(define lookupclass
+  (lambda (name state)
+    (display state) (newline)
+    (cond
+      ((null? state) (error "Class not defined!"))
+      ((eq? (getClassName state) name) (getClassClosure (caar state)))
+      (else (lookupclass name (getTailClasses state))))))
 
 
 
