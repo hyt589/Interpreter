@@ -56,11 +56,11 @@
       ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
       ((eq? (getFirst exp) 'dot) (lookupvar (getVar exp) (list (getThird (getDotInstance (getInstance exp) state)))))
       ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp type state return whileReturn throwReturn breakReturn)))))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
@@ -77,7 +77,6 @@
 (define getDotInstance
   (lambda (instance state)
     (cond
-      ;if the instance component only has length one
       ((not (list? instance)) (lookupinstance instance state))
       ((and (list? instance) (eq? (getFirst instance) 'new)) (instanceClosure (getSecond instance) state))
       (else (error "Invalid instance declaration statement")))))
