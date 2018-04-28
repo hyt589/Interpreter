@@ -328,7 +328,7 @@
 ; if the box has been updated, return the state
 (define updateBox
   (lambda (oldbinding newbinding state)
-    (begin (set-box! (getSecond oldbinding) (unbox (getSecond newbinding))) state)))
+    (begin (set-box! (getAfterFirst oldbinding) (unbox (getAfterFirst newbinding))) state)))
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
 (define M_state_Assignment_updateBinding
