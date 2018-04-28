@@ -378,7 +378,8 @@
   (lambda (body)
     (cond
       ((null? body) '())
-      ((eq? (getType (getFirst body)) 'var) (add (getFirst body) (parseFields (getTail body))))
+      ((and (eq? (getType (getFirst body)) 'var) (null? (getAfterSecond (getFirst body)))) (add (add (getSecond (getFirst body)) (box null)) (parseFields (getTail body))))
+      ((eq? (getType (getFirst body)) 'var) (add (add (getSecond (getFirst body)) (box (getThird (getFirst body)))) (parseFields (getTail body))))
       (else (parseFields (getTail body))))))
 
 ;define a function that prases all the functions in a class and returns a list of them
