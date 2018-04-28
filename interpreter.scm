@@ -40,6 +40,9 @@
       (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) type state return whileReturn throwReturn breakReturn))) state)))))
 
 (define bind cons)
+(define getInstance getSecond)
+(define getVar getThird)
+(define getInstanceFields getThird)
 ; defining a function that returns the value of an expression
 (define M_value
   (lambda (exp type state return whileReturn throwReturn breakReturn)
@@ -51,6 +54,7 @@
       ((eq? exp 'false) 'false)
       ((symbol? exp) (lookupvar exp state))   
       ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
+      ((eq? (getFirst exp) 'dot) (lookupvar (getVar exp) (list (getThird (getDotInstance (getInstance exp) state)))))
       ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
@@ -68,6 +72,23 @@
                                    (or (eq? (getFirst exp) '||)
                                        (or (eq? (getFirst exp) '!)))))))))) (M_value (M_bool exp state return whileReturn throwReturn breakReturn) state))
       (else (error "unknown operator")))))
+
+; define a function that takes the instance component of a dot statement and return the instance closure
+(define getDotInstance
+  (lambda (instance state)
+    (cond
+      ;if the instance component only has length one
+      ((not (list? instance)) (lookupinstance instance state))
+      ((and (list? instance) (eq? (getFirst instance) 'new)) (instanceClosure (getSecond instance) state))
+      (else (error "Invalid instance declaration statement")))))
+
+(define getType cadr)
+; define a function that looks up an instance in the state and return its instance closure
+(define lookupinstance
+  (lambda (instance state)
+    (cond
+      ((null? state) (error "Instance not found!"))
+      (else (lookupvar instance state)))))
 
 
 ; defining a function for assignment so that it returns a state after the assignment
@@ -171,7 +192,7 @@
 ;defining a function that returns a state after a statement
 (define M_state
   (lambda (stmt type state return whileReturn throwReturn breakReturn)
-    ;(display state) (newline)
+    (display state) (newline)
     (cond
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
@@ -323,7 +344,6 @@
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
-    (display name) (newline)
     (cond
       ((null? state) (error "Function not defined!"))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
