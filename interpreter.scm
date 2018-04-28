@@ -184,14 +184,14 @@
     ;(display state) (newline)
     (cond
       ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
-      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
 (define M_state
   (lambda (stmt type state return whileReturn throwReturn breakReturn)
-    (display state) (newline)
+    ;(display state) (newline)
     (cond
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
@@ -327,6 +327,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
+    (display state) (display var) (newline)
      (if (findvar var state)
          (if (box? (getAfterFirst (findvar var state)))
              (unbox (getAfterFirst (findvar var state)))
@@ -343,8 +344,10 @@
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
+    (display state) (newline)
     (cond
       ((null? state) (error "Function not defined!"))
+      ((list? name) (lookupfunc (getThird name) (getAfterFirst (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
