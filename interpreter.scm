@@ -46,6 +46,7 @@
 ; defining a function that returns the value of an expression
 (define M_value
   (lambda (exp type state return whileReturn throwReturn breakReturn)
+    (display exp) (newline)
     (cond
       ((number? exp) exp)
       ((eq? exp '#t) 'true)
@@ -93,8 +94,8 @@
 ; defining a function for assignment so that it returns a state after the assignment
 ; used box, defined (var (box)) as a binding
 (define M_state_assignment
-  (lambda (asg state return whileReturn throwReturn breakReturn)
-    (M_state_Assignment_updateBinding (bind (getSecond asg) (box (M_value (getThird asg) state return whileReturn throwReturn breakReturn))) state)))
+  (lambda (asg type state return whileReturn throwReturn breakReturn)
+    (M_state_Assignment_updateBinding (bind (getSecond asg) (box (M_value (getThird asg) type state return whileReturn throwReturn breakReturn))) state)))
 
 ; defining a function for the return whileReturn throwReturn statement that returns the value of the expression being returned
 (define M_state_return
@@ -183,9 +184,18 @@
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
     ;(display state) (newline)
     (cond
-      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
-      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
-      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindThis (getSecond funcallstat) (addlayer '() (cdr state))) return whileReturn throwReturn breakReturn))
+      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)))) state) return whileReturn throwReturn breakReturn)))))
+
+(define getInstanceName getSecond)
+
+; defining a function that binds this to the instance
+(define bindThis
+  (lambda (name state)
+    (cond
+      ((list? name) (add (add (add 'this (getDotInstance (getInstanceName name) state)) (topLayer state)) (getAfterFirst state)))
+      (else state))))
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
@@ -196,7 +206,7 @@
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
       ((eq? (getFirst stmt) 'var) (M_state_declaration stmt type state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) '=) (M_state_assignment stmt type  state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt type state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state return whileReturn throwReturn breakReturn))))
       ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
@@ -308,6 +318,7 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn)
+    ;(display binding) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ;if the variable is already declared, update the box
@@ -327,7 +338,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-    (display state) (display var) (newline)
+    ;(display state) (display var) (newline)
      (if (findvar var state)
          (if (box? (getAfterFirst (findvar var state)))
              (unbox (getAfterFirst (findvar var state)))
