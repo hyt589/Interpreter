@@ -46,7 +46,7 @@
 ; defining a function that returns the value of an expression
 (define M_value
   (lambda (exp type state return whileReturn throwReturn breakReturn)
-    (display exp) (newline)
+    ;(display exp) (newline)
     (cond
       ((number? exp) exp)
       ((eq? exp '#t) 'true)
@@ -79,7 +79,7 @@
   (lambda (instance state)
     (cond
       ((not (list? instance)) (lookupinstance instance state))
-      ((and (list? instance) (eq? (getFirst instance) 'new)) (instanceClosure (getSecond instance) state))
+      ((and (list? instance) (eq? (getFirst instance) 'new)) (bind 'instance (instanceClosure (getSecond instance) state)))
       (else (error "Invalid instance declaration statement")))))
 
 (define getType cadr)
@@ -344,7 +344,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-    ;(display state) (display var) (newline)
+    (display var) (display "----") (display state) (newline) (newline)
      (if (findvar var state)
          (if (box? (getAfterFirst (findvar var state)))
              (unbox (getAfterFirst (findvar var state)))
@@ -361,7 +361,7 @@
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
-    ;(display state) (newline)
+    ;(display name) (newline)
     (cond
       ((null? state) (error "Function not defined!"))
       ((list? name) (lookupfunc (getThird name) (getAfterFirst (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
@@ -458,7 +458,6 @@
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
-    ;(display state) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
       ((assq name (topLayer state)) (assq name (topLayer state)))
