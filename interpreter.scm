@@ -185,7 +185,7 @@
     (cond
       ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
       ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
-      (else (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
+      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
@@ -238,9 +238,9 @@
 (define createBinding
   (lambda (param input state)
     (cond
-      ((eq? input 'true) (list param (box 'true)))
-      ((eq? input 'false) (list param (box 'false)))
-      (else (list param (box (M_value input (poplayer state) '() '() '() '())))))))
+      ((eq? input 'true) (add param (box 'true)))
+      ((eq? input 'false) (add param (box 'false)))
+      (else (add param (box (M_value input null (poplayer state) '() '() '() '())))))))
     
 ; abstraction
 (define tryBody getSecond)
@@ -344,7 +344,7 @@
 ; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state)
-    (display state) (newline)
+    ;(display state) (newline)
     (cond
       ((null? state) (error "Function not defined!"))
       ((list? name) (lookupfunc (getThird name) (getAfterFirst (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
@@ -356,6 +356,7 @@
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
   (lambda (var state cpsreturn)
+    ;(display state)(newline)
     (cond
        ((null? state) (cpsreturn #f))
        ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
