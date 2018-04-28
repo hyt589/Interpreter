@@ -315,12 +315,17 @@
   (lambda (class state)
     (add (add class (topLayer state)) (getAfterFirst state))))
 
+(define key car)
+(define getInstanceName getSecond)
+(define getInstanceFieldName getThird)
+(define getFields getFourth)
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn)
-    ;(display binding) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
+       ; if the key of the binding is a dot component
+       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFields (getDotInstance (getInstanceName (key binding)) state))) binding state)))
        ;if the variable is already declared, update the box
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
@@ -328,6 +333,7 @@
 ; if the box has been updated, return the state
 (define updateBox
   (lambda (oldbinding newbinding state)
+    ;(display oldbinding) (newline)
     (begin (set-box! (getAfterFirst oldbinding) (unbox (getAfterFirst newbinding))) state)))
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
@@ -432,11 +438,23 @@
 ;instance closure: instance's class and a list of instance field values
 (define instanceClosure
   (lambda (class state)
-    (combine class (getFields (lookupclass class state)))))
+    (combine class (boxFields (getFields (lookupclass class state))))))
+
+; define a function that boxes all the instance fields
+(define bind cons)
+(define key car)
+(define value cdr)
+
+(define boxFields
+  (lambda (fieldLis)
+    (cond 
+      ((null? fieldLis) '())
+      (else (bind (bind (key (getFirst fieldLis)) (box (value (getFirst fieldLis)))) (boxFields (getAfterFirst fieldLis)))))))
 
 (define getClassName caaar)
 (define getClass caar)
 (define getTailClasses cdr)
+
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
@@ -445,6 +463,3 @@
       ((null? state) (error "Class not defined!"))
       ((assq name (topLayer state)) (assq name (topLayer state)))
       (else (lookupclass name (getTailClasses state))))))
-
-; define a function that operates as dot
-
