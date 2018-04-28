@@ -49,7 +49,7 @@
       ((eq? exp '#f) 'false)
       ((eq? exp 'true) 'true)
       ((eq? exp 'false) 'false)
-      ((symbol? exp) (lookupvar exp state))
+      ((symbol? exp) (lookupvar exp state))   
       ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
       ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
