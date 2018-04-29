@@ -10,7 +10,7 @@
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return
-          (call/cc (lambda (return) (M_state_funcall '(funcall main) classname (list (list (lookupclass classname (run (parser filename) classname M_state_nullState '() '() '() '())))) return '() '() '()))))))))
+          (call/cc (lambda (return) (M_state_funcall '(funcall main) classname (run (parser filename) classname M_state_nullState '() '() '() '()) return '() '() '()))))))))
 
 ; abstractions
 (define getFirst car)
@@ -182,11 +182,11 @@
 ; defining a function that returns the state after running a function
 (define M_state_funcall
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
-    ;(display state) (newline)
+    ;(display funcallstat) (newline)
     (cond
-      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
-      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindThis (getSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
-      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)))) state) return whileReturn throwReturn breakReturn)))))
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)))) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
+      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))))) state) return whileReturn throwReturn breakReturn)))))
 
 (define getInstanceName getSecond)
 
@@ -197,11 +197,32 @@
       ((list? name) (add (add (add 'this (getDotInstance (getInstanceName name) state)) (topLayer state)) (getAfterFirst state)))
       (else state))))
 
+; defining a function that binds super to the instance
+(define bindSuper
+  (lambda (name state)
+    ;(display name) (newline)
+    (cond
+      ((and (list? name) (hasSuperclass name state)) (add (add (add 'super (bind 'instance (instanceClosure (getSuperclass name state) state))) (topLayer state)) (getAfterFirst state)))
+      (else state))))
+
+; define a function that checks if the instance class has a superclass
+(define hasSuperclass
+  (lambda (name state)
+    ;(display (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state)) (newline)
+     (not (null? (getSecond (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state))))))
+
+(define getSuperclassTerm getSecond)
+(define getSuperclassName getSecond)
+
+(define getSuperclass
+  (lambda (name state)
+    (getSuperclassName (getSuperclassTerm (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state)))))
+
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
 (define M_state
   (lambda (stmt type state return whileReturn throwReturn breakReturn)
-    ;(display state) (newline)
+    ;(display state) (newline) (newline)
     (cond
       ((null? stmt) state)
       ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
@@ -313,6 +334,7 @@
 ; defining a class that declares classes
 (define M_state_Declaration_class
   (lambda (class state)
+    ;(display state) (newline)
     (add (add class (topLayer state)) (getAfterFirst state))))
 
 (define key car)
@@ -344,7 +366,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-    ;(display var) (display "----") (display state) (newline) (newline)
+    (display var) (display "----- ") (display state) (newline) (newline)
      (if (findvar var state)
          (if (box? (getAfterFirst (findvar var state)))
              (unbox (getAfterFirst (findvar var state)))
@@ -364,7 +386,7 @@
     ;(display name) (newline)
     (cond
       ((null? state) (error "Function not defined!"))
-      ((list? name) (lookupfunc (getThird name) (getAfterFirst (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
+      ((list? name) (lookupfunc (getThird name) (getFunctions (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
       ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
        (assq 'function (topLayer state)))
       ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
@@ -458,6 +480,7 @@
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
+    ;(display name) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
       ((assq name (topLayer state)) (assq name (topLayer state)))
