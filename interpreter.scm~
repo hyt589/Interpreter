@@ -3,14 +3,14 @@
 ;--------------------------------------------------------------------------------------------------------
 ;---------------------------Interpreter Implementation---------------------------------------------------
 
+(define getFunctions cdddr)
 ; defining a function that takes an input file to be executed and returns a value
 (define interpret
-  (lambda (filename)
+  (lambda (filename classname)
     (cond
       ((not (string? filename)) (error "File name must be a string!"))
       (else (lookupvar 'M_state_return
-          (call/cc (lambda (return) (M_state_funcall '(funcall main) (run (parser filename) M_state_nullState '() '() '() '()) return '() '() '()))))))))
-
+          (call/cc (lambda (return) (M_state_funcall '(funcall main) classname (run (parser filename) classname M_state_nullState '() '() '() '()) return '() '() '()))))))))
 
 ; abstractions
 (define getFirst car)
@@ -34,28 +34,35 @@
 
 ; defining a function for variable declaration so that it returns the state after the declaration statement
 (define M_state_declaration
-  (lambda (dec state return whileReturn throwReturn breakReturn)
+  (lambda (dec type state return whileReturn throwReturn breakReturn)
     (cond
       ((null? (getAfterSecond dec)) (M_state_Declaration_updateBinding (bind (getSecond dec) (box null)) state))
-      (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) state return whileReturn throwReturn breakReturn))) state)))))
+      (else (M_state_Declaration_updateBinding (bind (getSecond dec) (box (M_value (getThird dec) type state return whileReturn throwReturn breakReturn))) state)))))
 
+(define bind cons)
+(define getInstance getSecond)
+(define getVar getThird)
+(define getInstanceFields getThird)
 ; defining a function that returns the value of an expression
 (define M_value
-  (lambda (exp state return whileReturn throwReturn breakReturn)
+  (lambda (exp type state return whileReturn throwReturn breakReturn)
+    ;(display exp) (newline)
     (cond
       ((number? exp) exp)
       ((eq? exp '#t) 'true)
       ((eq? exp '#f) 'false)
       ((eq? exp 'true) 'true)
       ((eq? exp 'false) 'false)
-      ((symbol? exp) (lookupvar exp state))
-      ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) state return whileReturn throwReturn breakReturn) (M_value (getThird exp) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp state return whileReturn throwReturn breakReturn)))))
+      ((symbol? exp) (lookupvar exp state))   
+      ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
+      ((eq? (getFirst exp) 'dot) (lookupvar (getVar exp) (list (getThird (getDotInstance (getInstance exp) state)))))
+      ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '-) (- (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '*) (* (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '/) (quotient (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) '%) (modulo (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst exp) 'funcall) (lookupvar 'M_state_return (call/cc (lambda (return) (M_state_funcall exp type state return whileReturn throwReturn breakReturn)))))
       ((or (eq? (getFirst exp) '==)
            (or (eq? (getFirst exp) '<)
                (or (eq? (getFirst exp) '>)
@@ -67,19 +74,35 @@
                                        (or (eq? (getFirst exp) '!)))))))))) (M_value (M_bool exp state return whileReturn throwReturn breakReturn) state))
       (else (error "unknown operator")))))
 
+; define a function that takes the instance component of a dot statement and return the instance closure
+(define getDotInstance
+  (lambda (instance state)
+    (cond
+      ((not (list? instance)) (lookupinstance instance state))
+      ((and (list? instance) (eq? (getFirst instance) 'new)) (bind 'instance (instanceClosure (getSecond instance) state)))
+      (else (error "Invalid instance declaration statement")))))
+
+(define getType cadr)
+; define a function that looks up an instance in the state and return its instance closure
+(define lookupinstance
+  (lambda (instance state)
+    (cond
+      ((null? state) (error "Instance not found!"))
+      (else (lookupvar instance state)))))
+
 
 ; defining a function for assignment so that it returns a state after the assignment
 ; used box, defined (var (box)) as a binding
 (define M_state_assignment
-  (lambda (asg state return whileReturn throwReturn breakReturn)
-    (M_state_Assignment_updateBinding (bind (getSecond asg) (box (M_value (getThird asg) state return whileReturn throwReturn breakReturn))) state)))
+  (lambda (asg type state return whileReturn throwReturn breakReturn)
+    (M_state_Assignment_updateBinding (bind (getSecond asg) (box (M_value (getThird asg) type state return whileReturn throwReturn breakReturn))) state)))
 
 ; defining a function for the return whileReturn throwReturn statement that returns the value of the expression being returned
 (define M_state_return
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
     (cond
       ((null? (getSecond stmt)) (error "Nothing to M_state_return"))
-      (else (M_state_Declaration_updateBinding (bind 'M_state_return (box (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn))) (poplayer state))))))
+      (else (M_state_Declaration_updateBinding (bind 'M_state_return (box (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn))) (poplayer state))))))
 
 ; defining a function for throw so that returns a state after throw
 (define M_state_throw
@@ -91,7 +114,7 @@
 
 ; defining a function that returns a boolean based on the input statement
 (define M_bool
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
     (cond
       ((null? stmt) (error "Conditional statement needed!"))
       ((eq? stmt 'true) '#t)
@@ -99,39 +122,38 @@
       ((eq? stmt '#t) '#t)
       ((eq? stmt '#f) '#f)
       ((symbol? stmt) (M_bool (lookupvar stmt state) state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) '==) (= (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '<) (< (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '>) (> (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '>=) (>= (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '<=) (<= (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '!=) (not (= (M_value (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) state return whileReturn throwReturn breakReturn))))
-      ((eq? (getFirst stmt) '&&) (and (M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_bool (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '||) (or (M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_bool (getThird stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) '!) (not (M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn)))
-      ((eq? (getFirst stmt) 'funcall) (lookupvar 'M_state_return (M_state_funcall stmt state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '==) (= (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '<) (< (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '>) (> (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '>=) (>= (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '<=) (<= (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '!=) (not (= (M_value (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_value (getThird stmt) type state return whileReturn throwReturn breakReturn))))
+      ((eq? (getFirst stmt) '&&) (and (M_bool (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_bool (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '||) (or (M_bool (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_bool (getThird stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) '!) (not (M_bool (getSecond stmt) type state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) 'funcall) (lookupvar 'M_state_return (M_state_funcall stmt type state return whileReturn throwReturn breakReturn)))
       (else (error "Invalid conditional statement!")))))
 
 ; defining a function that returns a state after an if statement
 (define M_state_if
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
     (cond
-      ((M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_state (getThird stmt) state return whileReturn throwReturn breakReturn))
+      ((M_bool (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_state (getThird stmt) state return whileReturn throwReturn breakReturn))
       ((null? (getAfterThird stmt)) state)
-      (else (M_state (getFourth stmt) state return whileReturn throwReturn breakReturn)))))
+      (else (M_state (getFourth stmt) type state return whileReturn throwReturn breakReturn)))))
 
 ; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
 (define run-cps
-  (lambda (stmtlis state return whileReturn throwReturn breakReturn cpsreturn)
+  (lambda (stmtlis type state return whileReturn throwReturn breakReturn cpsreturn)
     (cond
       ((null? stmtlis) (cpsreturn state))
-      ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn)))
-      (else (cpsreturn (run-cps (getAfterFirst stmtlis) (M_state (getFirst stmtlis) state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn))))))
+      ((null? (getAfterFirst stmtlis)) (cpsreturn (M_state (getFirst stmtlis) type state return whileReturn throwReturn breakReturn)))
+      (else (cpsreturn (run-cps (getAfterFirst stmtlis) type (M_state (getFirst stmtlis) type state return whileReturn throwReturn breakReturn) return whileReturn throwReturn breakReturn cpsreturn))))))
 
 ; defining a wrapper for run-cps
 (define run
-  (lambda (stmtlis state return whileReturn throwReturn breakReturn)
-    (run-cps stmtlis state return whileReturn throwReturn breakReturn (lambda (v) v))))
-
+  (lambda (stmtlis type state return whileReturn throwReturn breakReturn)
+    (run-cps stmtlis type state return whileReturn throwReturn breakReturn (lambda (v) v))))
 
 ;defining a function that returns a state after a while statement
 (define M_state_while-cps
@@ -156,36 +178,82 @@
   (lambda (func state)
     (M_state_Declaration_function func state)))
 
+
 ; defining a function that returns the state after running a function
 (define M_state_funcall
-  (lambda (funcallstat state return whileReturn throwReturn breakReturn)
+  (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
+    ;(display funcallstat) (newline)
     (cond
-      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
-      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) (addlayer '() (cdr state)) return whileReturn throwReturn breakReturn))
-      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) (cons (getFirst (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))) state) return whileReturn throwReturn breakReturn)))))
-    
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)) type)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)))) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
+      (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))))) state) return whileReturn throwReturn breakReturn)))))
+
+
+; defining a function that returns a function if defined or an error msg if not
+(define lookupfunc
+  (lambda (name state type)
+    (display name) (display "--------") (display state) (newline)
+    (cond
+      ((null? state) (error "Function not defined!"))
+      ((list? name) (lookupfunc (getThird name) (getFunctions (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
+      ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
+       (assq 'function (topLayer state)))
+      ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
+      (else (lookupfunc name (getAfterFirst state)))))) 
+
+(define getInstanceName getSecond)
+
+; defining a function that binds this to the instance
+(define bindThis
+  (lambda (name state)
+    (cond
+      ((and (list? name) (findvar 'this state)) state)
+      ((and (list? name) (not (findvar 'this state))) (add (add (add 'this (getDotInstance (getInstanceName name) state)) (topLayer state)) (getAfterFirst state)))
+      (else state))))
+
+; defining a function that binds super to the instance
+(define bindSuper
+  (lambda (name state)
+    ;(display name) (newline)
+    (cond
+      ((and (list? name) (hasSuperclass name state)) (add (add (add 'super (bind 'instance (instanceClosure (getSuperclass name state) state))) (topLayer state)) (getAfterFirst state)))
+      (else state))))
+
+; define a function that checks if the instance class has a superclass
+(define hasSuperclass
+  (lambda (name state)
+    ;(display (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state)) (newline)
+     (not (null? (getSecond (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state))))))
+
+(define getSuperclassTerm getSecond)
+(define getSuperclassName getSecond)
+
+(define getSuperclass
+  (lambda (name state)
+    (getSuperclassName (getSuperclassTerm (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state)))))
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
 (define M_state
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
+    ;(display state) (newline) (newline)
     (cond
       ((null? stmt) state)
-      ((eq? (getFirst stmt) 'class) ())
-      ((eq? (getFirst stmt) 'var) (M_state_declaration stmt state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) '=) (M_state_assignment stmt state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) 'return) (return (M_state_return stmt state return whileReturn throwReturn breakReturn)))
+      ((eq? (getFirst stmt) 'class) (M_state_Declaration_class (classClosure stmt state) state))
+      ((eq? (getFirst stmt) 'var) (M_state_declaration stmt type state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) '=) (M_state_assignment stmt type  state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'return) (return (M_state_return stmt type state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state return whileReturn throwReturn breakReturn))))
-      ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'if) (M_state_if stmt type state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'while) (returnit (call/cc (lambda (breakReturn) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
-      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
+      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) type (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
       ((eq? (getFirst stmt) 'continue) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'continue) state)))
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
-      ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'try) (M_state_try stmt type state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
-      ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt state return whileReturn throwReturn breakReturn))
-      ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt state funcreturn whileReturn throwReturn breakReturn))))
-      ((eq? (getFirst stmt) 'static) (M_state_function (getAftertFirst stmt) state))
+      ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt type state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt type state funcreturn whileReturn throwReturn breakReturn))))
+      ((eq? (getFirst stmt) 'static-function) (M_state_function (cons 'function (getAfterFirst stmt)) state))
       (else (error "Invalid statements")))))
 
 ; Creates a proper layer of the function call
@@ -215,9 +283,9 @@
 (define createBinding
   (lambda (param input state)
     (cond
-      ((eq? input 'true) (list param (box 'true)))
-      ((eq? input 'false) (list param (box 'false)))
-      (else (list param (box (M_value input (poplayer state) '() '() '() '())))))))
+      ((eq? input 'true) (add param (box 'true)))
+      ((eq? input 'false) (add param (box 'false)))
+      (else (add param (box (M_value input null (poplayer state) '() '() '() '())))))))
     
 ; abstraction
 (define tryBody getSecond)
@@ -247,10 +315,10 @@
 
 ; defining a function for try statement so that it returns a state after try statement
 (define M_state_try
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
     (M_state_final (finalBody stmt)
     (M_state_catch (catchBody stmt)   (call/cc (lambda (throwReturn) 
-                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state) return whileReturn throwReturn breakReturn)))
+                   (run (tryBody stmt) type (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state) return whileReturn throwReturn breakReturn)))
                    return whileReturn throwReturn breakReturn)
              return whileReturn throwReturn breakReturn)))
 
@@ -277,11 +345,24 @@
   (lambda (function state)
     (add (add function (topLayer state)) (getAfterFirst state))))
 
+; defining a class that declares classes
+(define M_state_Declaration_class
+  (lambda (class state)
+    ;(display state) (newline)
+    (add (add class (topLayer state)) (getAfterFirst state))))
+
+(define key car)
+(define getInstanceName getSecond)
+(define getInstanceFieldName getThird)
+(define getFields getFourth)
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn)
+    ;(display binding) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
+       ; if the key of the binding is a dot component
+       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFields (getDotInstance (getInstanceName (key binding)) state))) binding state)))
        ;if the variable is already declared, update the box
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))))))))
@@ -289,7 +370,8 @@
 ; if the box has been updated, return the state
 (define updateBox
   (lambda (oldbinding newbinding state)
-    (begin (set-box! (getSecond oldbinding) (unbox (getSecond newbinding))) state)))
+    ;(display oldbinding) (newline)
+    (begin (set-box! (getAfterFirst oldbinding) (unbox (getAfterFirst newbinding))) state)))
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
 (define M_state_Assignment_updateBinding
@@ -299,11 +381,19 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-     (if (findvar var state)
-         (if (box? (getSecond (findvar var state)))
-             (unbox (getSecond (findvar var state)))
-             (getSecond (findvar var state)))
-         ((error "Variable not declared!")))))
+    ;(display (and (findvar var state) (box? (getAfterFirst (findvar var state))))) (newline)
+    ;(display var) (display " ----- ") (display state) (newline) (newline)
+    (cond
+      ((and (findvar var state) (box? (getAfterFirst (findvar var state)))) (unbox (getAfterFirst (findvar var state))))
+      ((findvar var state) (getAfterFirst (findvar var state)))
+      ((findvar var (list (getThisFields state))) (unbox (getAfterFirst (findvar var (list (getThisFields state))))))
+      ((error "Variable not declared!")))))
+
+
+(define getThisFields
+  (lambda (state)
+    ;(display (lookupvar 'this (topLayer state))) (newline)
+      (getThird (lookupvar 'this state))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
 (define declareLocalVar
@@ -312,19 +402,12 @@
       ((assq (key binding) (topLayer state)) (error "Local variable already declared!"))
       (else (M_state_Declaration_updateBinding binding state)))))
 
-; defining a function that returns a function if defined or an error msg if not
-(define lookupfunc
-  (lambda (name state)
-    (cond
-      ((null? state) (error "Function not defined!"))
-      ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
-       (assq 'function (topLayer state)))
-      ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
-      (else (lookupfunc name (getAfterFirst state))))))
+
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
   (lambda (var state cpsreturn)
+    ;(display state) (newline) (newline)
     (cond
        ((null? state) (cpsreturn #f))
        ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
@@ -338,23 +421,79 @@
 ;---------------------------part4----------------------------------
 ;------------------------------------------------------------------
 
-(define className getSecond)
-(define superClass caaddr)
-(define classBody getFourth)
-    
-    
+(define cadaddr
+  (lambda (lis)
+    (car (cdaddr lis))))
+
+(define getName getSecond)
+(define getSuperClass getThird)
+(define getBody getFourth)
+(define combine cons)
 ;define a function that returns the closure of a given class
+;parent class, list of instance fields, list of methods/function names and closures
 (define classClosure
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt state)
+    ;(display stmt) (newline)
+    (list (getName stmt) (getSuperClass stmt) (parseFields (getBody stmt)) (parseFunctions (getBody stmt)))))
+ 
+;define a function that parses the superclass
+(define parseSuperClass
+  (lambda (superclass)
     (cond
-      ((and (not (null? (getThird stmt)))(eq? (getFirst (getThird stmt)) 'extends)) (list (className stmt) (superClass stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn)))
-      (else (list (className stmt) (run (classBody stmt) state return whileReturn throwReturn breakReturn))))))
+      ((null? superclass) '())
+      ((eq? (getFirst superclass) 'extends) (getSecond superclass))
+      (else (error "Superclass format error!")))))
 
-;defien a function that returns the closure of a given function
+(define getType car)
+(define add cons)
+(define getTail cdr)
+;define a function that parses all the fields in a class and returns a list of them
+(define parseFields
+  (lambda (body)
+    (cond
+      ((null? body) '())
+      ((and (eq? (getType (getFirst body)) 'var) (null? (getAfterSecond (getFirst body)))) (add (add (getSecond (getFirst body)) null) (parseFields (getTail body))))
+      ((eq? (getType (getFirst body)) 'var) (add (add (getSecond (getFirst body)) (getThird (getFirst body))) (parseFields (getTail body))))
+      (else (parseFields (getTail body))))))
+
+;define a function that prases all the functions in a class and returns a list of them
+(define parseFunctions
+  (lambda (body)
+    (cond
+      ((null? body) '())
+      ((or (eq? (getType (getFirst body)) 'function) (eq? (getType (getFirst body)) 'static-function))
+              (add (add 'function (getAfterFirst (getFirst body))) (parseFunctions (getTail body))))
+      (else (parseFunctions (getTail body))))))
 
 
+(define getFields getThird)
+(define combine list)
 ;define a function that returns the closure of a given instance of a class
+;instance closure: instance's class and a list of instance field values
+(define instanceClosure
+  (lambda (class state)
+    (combine class (boxFields (getFields (lookupclass class state))))))
 
+; define a function that boxes all the instance fields
+(define bind cons)
+(define key car)
+(define value cdr)
 
+(define boxFields
+  (lambda (fieldLis)
+    (cond 
+      ((null? fieldLis) '())
+      (else (bind (bind (key (getFirst fieldLis)) (box (value (getFirst fieldLis)))) (boxFields (getAfterFirst fieldLis)))))))
 
+(define getClassName caaar)
+(define getClass caar)
+(define getTailClasses cdr)
 
+; defining a function that lookup a class and return the class closure
+(define lookupclass
+  (lambda (name state)
+    ;(display name) (newline)
+    (cond
+      ((null? state) (error "Class not defined!"))
+      ((assq name (topLayer state)) (assq name (topLayer state)))
+      (else (lookupclass name (getTailClasses state))))))

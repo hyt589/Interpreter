@@ -184,22 +184,33 @@
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
     ;(display funcallstat) (newline)
     (cond
-      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)) type)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)))) return whileReturn throwReturn breakReturn))
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) state type)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)))) return whileReturn throwReturn breakReturn))
       ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))))) state) return whileReturn throwReturn breakReturn)))))
 
-
-; defining a function that returns a function if defined or an error msg if not
 (define lookupfunc
   (lambda (name state type)
-    (display name) (display "--------") (display state) (newline)
+    (display name) (newline)
     (cond
-      ((null? state) (error "Function not defined!"))
-      ((list? name) (lookupfunc (getThird name) (getFunctions (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
-      ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
-       (assq 'function (topLayer state)))
-      ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
-      (else (lookupfunc name (getAfterFirst state)))))) 
+      ((null? state) (error "Function not defined"))
+      ((and (list? name) (findfunc (getThird name) (classFunctions type state))) (findfunc (getThird name) (classFunctions type state)))
+      ((and (hasSuperclass type state) (findfunc name (classFunctions (getSuperclass type state) state))) (findfunc name (classFunctions (getSuperclass type state) state)))
+      (else (error "Function not defined")))))
+
+(define classFunctions
+  (lambda (classname state)
+    (getFunctions (lookupclass classname state))))
+
+; defining a function that returns a function if defined or an error msg if not
+(define findfunc
+  (lambda (name funclist)
+    ;(display name) (display "--------") (display state) (newline)
+    (cond
+      ((null? funclist) #f)
+      ((and (assq 'function funclist) (equal? (getSecond (assq 'function funclist)) name))
+       (assq 'function funclist))
+      ((assq 'function funclist) (findfunc name (getAfterFirst funclist)))
+      (else #f)))) 
 
 (define getInstanceName getSecond)
 
@@ -208,7 +219,7 @@
   (lambda (name state)
     (cond
       ((and (list? name) (findvar 'this state)) state)
-      ((and (list? name) (not (findvar 'this state))) (add (add (add 'this (getDotInstance (getInstanceName name) state)) (topLayer state)) (getAfterFirst state)))
+      ((and (list? name) (not (findvar 'this state))) (add (add (add 'this (getDotInstance (getSecond name) state)) (topLayer state)) (getAfterFirst state)))
       (else state))))
 
 ; defining a function that binds super to the instance
@@ -216,21 +227,21 @@
   (lambda (name state)
     ;(display name) (newline)
     (cond
-      ((and (list? name) (hasSuperclass name state)) (add (add (add 'super (bind 'instance (instanceClosure (getSuperclass name state) state))) (topLayer state)) (getAfterFirst state)))
+      ((and (list? name) (hasSuperclass name state)) (add (add (add 'super (bind 'instance (instanceClosure (getSuperclass (getSecond name) state) state))) (topLayer state)) (getAfterFirst state)))
       (else state))))
 
 ; define a function that checks if the instance class has a superclass
 (define hasSuperclass
-  (lambda (name state)
-    ;(display (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state)) (newline)
-     (not (null? (getSecond (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state))))))
+  (lambda (classname state)
+    ;(display state) (newline)
+     (not (null? (getSecond (lookupclass classname state))))))
 
 (define getSuperclassTerm getSecond)
 (define getSuperclassName getSecond)
 
 (define getSuperclass
-  (lambda (name state)
-    (getSuperclassName (getSuperclassTerm (lookupclass (getInstanceName (getDotInstance (getInstanceName name) state)) state)))))
+  (lambda (classname state)
+    (getSuperclassName (getSuperclassTerm (lookupclass classname state)))))
 
 (define returnit (lambda(v) v))
 ;defining a function that returns a state after a statement
