@@ -184,9 +184,22 @@
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
     ;(display funcallstat) (newline)
     (cond
-      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)))) return whileReturn throwReturn breakReturn))
+      ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)) type)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state)))) return whileReturn throwReturn breakReturn))
       ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state))))) state) return whileReturn throwReturn breakReturn)))))
+
+
+; defining a function that returns a function if defined or an error msg if not
+(define lookupfunc
+  (lambda (name state type)
+    (display name) (display "--------") (display state) (newline)
+    (cond
+      ((null? state) (error "Function not defined!"))
+      ((list? name) (lookupfunc (getThird name) (getFunctions (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
+      ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
+       (assq 'function (topLayer state)))
+      ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
+      (else (lookupfunc name (getAfterFirst state)))))) 
 
 (define getInstanceName getSecond)
 
@@ -194,7 +207,8 @@
 (define bindThis
   (lambda (name state)
     (cond
-      ((list? name) (add (add (add 'this (getDotInstance (getInstanceName name) state)) (topLayer state)) (getAfterFirst state)))
+      ((and (list? name) (findvar 'this state)) state)
+      ((and (list? name) (not (findvar 'this state))) (add (add (add 'this (getDotInstance (getInstanceName name) state)) (topLayer state)) (getAfterFirst state)))
       (else state))))
 
 ; defining a function that binds super to the instance
@@ -388,17 +402,7 @@
       ((assq (key binding) (topLayer state)) (error "Local variable already declared!"))
       (else (M_state_Declaration_updateBinding binding state)))))
 
-; defining a function that returns a function if defined or an error msg if not
-(define lookupfunc
-  (lambda (name state)
-    ;(display name) (newline)
-    (cond
-      ((null? state) (error "Function not defined!"))
-      ((list? name) (lookupfunc (getThird name) (getFunctions (lookupclass (getSecond (getDotInstance (getSecond name) state)) state))))
-      ((and (assq 'function (topLayer state)) (equal? (getSecond (assq 'function (topLayer state))) name))
-       (assq 'function (topLayer state)))
-      ((assq 'function (topLayer state)) (lookupfunc name (list (getAfterFirst (topLayer state)))))
-      (else (lookupfunc name (getAfterFirst state))))))
+
 
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
