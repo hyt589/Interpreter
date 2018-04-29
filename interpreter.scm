@@ -136,11 +136,11 @@
 
 ; defining a function that returns a state after an if statement
 (define M_state_if
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
     (cond
-      ((M_bool (getSecond stmt) state return whileReturn throwReturn breakReturn) (M_state (getThird stmt) state return whileReturn throwReturn breakReturn))
+      ((M_bool (getSecond stmt) type state return whileReturn throwReturn breakReturn) (M_state (getThird stmt) state return whileReturn throwReturn breakReturn))
       ((null? (getAfterThird stmt)) state)
-      (else (M_state (getFourth stmt) state return whileReturn throwReturn breakReturn)))))
+      (else (M_state (getFourth stmt) type state return whileReturn throwReturn breakReturn)))))
 
 ; defining a function that takes an initial state and a list of statements and returns the final state after runing the statements in the list
 (define run-cps
@@ -230,12 +230,12 @@
       ((eq? (getFirst stmt) '=) (M_state_assignment stmt type  state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'return) (return (M_state_return stmt type state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst stmt) 'throw)  (if (null? throwReturn) (error "Error: throw not in try block") (throwReturn (M_state_throw stmt state return whileReturn throwReturn breakReturn))))
-      ((eq? (getFirst stmt) 'if) (M_state_if stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'if) (M_state_if stmt type state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'while) (returnit (call/cc (lambda (breakReturn) (M_state_while stmt (M_state_Declaration_updateBinding (bind 'gotype 0) state) return whileReturn throwReturn breakReturn)))))
-      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
+      ((eq? (getFirst stmt) 'begin)  (poplayer (call/cc (lambda (whileReturn) (run (getAfterFirst stmt) type (addlayer emptyLayer state) return whileReturn throwReturn breakReturn)))))
       ((eq? (getFirst stmt) 'continue) (whileReturn (M_state_Assignment_updateBinding (bind 'gotype 'continue) state)))
       ((eq? (getFirst stmt) 'break) (breakReturn (poplayer (M_state_Assignment_updateBinding (bind 'gotype 'break) state))))
-      ((eq? (getFirst stmt) 'try) (M_state_try stmt state return whileReturn throwReturn breakReturn))
+      ((eq? (getFirst stmt) 'try) (M_state_try stmt type state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'function) (M_state_function stmt state))
       ((and (eq? (getFirst stmt) 'funcall) (eq? (getSecond stmt) 'main)) (M_state_funcall stmt type state return whileReturn throwReturn breakReturn))
       ((eq? (getFirst stmt) 'funcall) (call/cc (lambda (funcreturn) (M_state_funcall stmt type state funcreturn whileReturn throwReturn breakReturn))))
@@ -301,10 +301,10 @@
 
 ; defining a function for try statement so that it returns a state after try statement
 (define M_state_try
-  (lambda (stmt state return whileReturn throwReturn breakReturn)
+  (lambda (stmt type state return whileReturn throwReturn breakReturn)
     (M_state_final (finalBody stmt)
     (M_state_catch (catchBody stmt)   (call/cc (lambda (throwReturn) 
-                   (run (tryBody stmt) (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state) return whileReturn throwReturn breakReturn)))
+                   (run (tryBody stmt) type (M_state_Declaration_updateBinding (bind 'throw (box 'none)) state) return whileReturn throwReturn breakReturn)))
                    return whileReturn throwReturn breakReturn)
              return whileReturn throwReturn breakReturn)))
 
@@ -344,6 +344,7 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn)
+    ;(display binding) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ; if the key of the binding is a dot component
@@ -366,16 +367,19 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-    (display var) (display " ----- ") (display state) (newline) (newline)
+    ;(display (and (findvar var state) (box? (getAfterFirst (findvar var state))))) (newline)
+    ;(display var) (display " ----- ") (display state) (newline) (newline)
     (cond
       ((and (findvar var state) (box? (getAfterFirst (findvar var state)))) (unbox (getAfterFirst (findvar var state))))
       ((findvar var state) (getAfterFirst (findvar var state)))
-      ((findvar var (getThird (getThisFields state))) (unbox (getAfterFirst (findvar var (getThisFields state)))))
+      ((findvar var (list (getThisFields state))) (unbox (getAfterFirst (findvar var (list (getThisFields state))))))
       ((error "Variable not declared!")))))
+
 
 (define getThisFields
   (lambda (state)
-      (getThird (lookupvar 'this (topLayer state)))))
+    ;(display (lookupvar 'this (topLayer state))) (newline)
+      (getThird (lookupvar 'this state))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
 (define declareLocalVar
@@ -399,7 +403,7 @@
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
   (lambda (var state cpsreturn)
-    ;(display state)(newline)
+    ;(display state) (newline) (newline)
     (cond
        ((null? state) (cpsreturn #f))
        ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
