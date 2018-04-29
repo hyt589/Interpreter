@@ -366,12 +366,16 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-    (display var) (display "----- ") (display state) (newline) (newline)
-     (if (findvar var state)
-         (if (box? (getAfterFirst (findvar var state)))
-             (unbox (getAfterFirst (findvar var state)))
-             (getAfterFirst (findvar var state)))
-         ((error "Variable not declared!")))))
+    (display var) (display " ----- ") (display state) (newline) (newline)
+    (cond
+      ((and (findvar var state) (box? (getAfterFirst (findvar var state)))) (unbox (getAfterFirst (findvar var state))))
+      ((findvar var state) (getAfterFirst (findvar var state)))
+      ((findvar var (getThird (getThisFields state))) (unbox (getAfterFirst (findvar var (getThisFields state)))))
+      ((error "Variable not declared!")))))
+
+(define getThisFields
+  (lambda (state)
+      (getThird (lookupvar 'this (topLayer state)))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
 (define declareLocalVar
