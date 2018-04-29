@@ -185,7 +185,7 @@
     ;(display state) (newline)
     (cond
       ((null? (cdr state)) (run (getFourth (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) type (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) (getFunctions (lookupclass type state)))) (getAfterSecond funcallstat) (addlayer '() state))) return whileReturn throwReturn breakReturn))
-      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindThis (getSecond funcallstat) (addlayer '() (cdr state))) return whileReturn throwReturn breakReturn))
+      ((null? (getAfterSecond funcallstat)) (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (bindThis (getSecond funcallstat) (addlayer '() state)) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (lookupfunc (getSecond funcallstat) state)) type (cons (getFirst (bindThis (getSecond funcallstat) (createFuncLayer (getThird (lookupfunc (getSecond funcallstat) state)) (getAfterSecond funcallstat) (addlayer '() state)))) state) return whileReturn throwReturn breakReturn)))))
 
 (define getInstanceName getSecond)
@@ -344,7 +344,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state)
-    (display var) (display "----") (display state) (newline) (newline)
+    ;(display var) (display "----") (display state) (newline) (newline)
      (if (findvar var state)
          (if (box? (getAfterFirst (findvar var state)))
              (unbox (getAfterFirst (findvar var state)))
