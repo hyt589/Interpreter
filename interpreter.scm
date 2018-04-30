@@ -184,6 +184,7 @@
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
     ;(display funcallstat) (newline)
     (cond
+      ((and (not (list? (getSecond funcallstat))) (not (eq? (getSecond funcallstat) 'main))) (M_state_funcall (list (getFirst funcallstat) (list 'dot 'this (getSecond funcallstat))) type state return whileReturn throwReturn breakReturn))
       ((null? (cdr state)) (run (getFourth (getSecond (lookupfunc (getSecond funcallstat) state type))) (getFirst (lookupfunc (getSecond funcallstat) state type)) (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (getSecond (lookupfunc (getSecond funcallstat) state type))) (getAfterSecond funcallstat) (addlayer '() state)) type) type) return whileReturn throwReturn breakReturn))
       ((null? (getAfterSecond funcallstat)) (run (getFourth (getSecond (lookupfunc (getSecond funcallstat) state type))) (getFirst (lookupfunc (getSecond funcallstat) state type)) (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (addlayer '() state)  type) type) return whileReturn throwReturn breakReturn))
       (else (run (getFourth (getSecond (lookupfunc (getSecond funcallstat) state type))) (getFirst (lookupfunc (getSecond funcallstat) state type)) (cons (getFirst (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (getSecond (lookupfunc (getSecond funcallstat) state type))) (getAfterSecond funcallstat) (addlayer '() state)) type) type)) state) return whileReturn throwReturn breakReturn)))))
@@ -385,11 +386,12 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn type)
-    (display binding) (newline) (newline)
+    ;(display binding) (newline) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
+       ((and (list? (key binding)) (eq? (getInstanceName (key binding)) 'this)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state type))) binding state)))
        ; if the key of the binding is a dot component
-       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state  type))) binding state)))
+       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state type))) binding state)))
        ;if the variable is already declared, update the box
        ((not (list? (key binding))) (M_state_Assignment_updateBinding-cps (cons (list 'dot 'this (key binding)) (getAfterFirst binding)) state cpsreturn type))
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
@@ -398,7 +400,7 @@
 ; if the box has been updated, return the state
 (define updateBox
   (lambda (oldbinding newbinding state)
-    ;(display oldbinding) (newline)
+    ;(display oldbinding) (display ":") (display newbinding) (newline)
     (begin (set-box! (getAfterFirst oldbinding) (unbox (getAfterFirst newbinding))) state)))
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
@@ -409,7 +411,7 @@
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state type)
-    ;(display var) (display " -- ")  (display state) (newline) (newline)
+    (display var) (display " -- ")  (display state) (newline) (newline)
     (cond
       ((and (findvar var state) (box? (getAfterFirst (findvar var state)))) (unbox (getAfterFirst (findvar var state))))
       ((findvar var state) (getAfterFirst (findvar var state)))
