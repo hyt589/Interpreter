@@ -53,7 +53,7 @@
       ((eq? exp '#f) 'false)
       ((eq? exp 'true) 'true)
       ((eq? exp 'false) 'false)
-      ((and (symbol? exp)  (box? (lookupvar exp state type))) (unbox (lookupvar exp state type)))
+      ;((and (symbol? exp) (box? (lookupvar exp state type))) (unbox (lookupvar exp state type)))
       ((symbol? exp) (lookupvar exp state type))
       ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
       ((eq? (getFirst exp) 'dot) (lookupvar (getVar exp) (list (getThird (getDotInstance (getInstance exp) state type))) type))
@@ -373,7 +373,7 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn type)
-    ;(display binding) (newline)
+    ;(display state) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ; if the key of the binding is a dot component
@@ -390,13 +390,13 @@
 
 ; defining a wrapper for M_State_Assignment_updateBinding-cps
 (define M_state_Assignment_updateBinding
-  (lambda (binding state  type)
+  (lambda (binding state type)
     (M_state_Assignment_updateBinding-cps binding state (lambda(v) v) type)))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
 (define lookupvar
   (lambda (var state type)
-    (display var) (display " ----- ") (display state) (newline) (newline)
+    ;(display var) (display " -- ")  (display state) (newline) (newline)
     (cond
       ((and (findvar var state) (box? (getAfterFirst (findvar var state)))) (unbox (getAfterFirst (findvar var state))))
       ((findvar var state) (getAfterFirst (findvar var state)))
