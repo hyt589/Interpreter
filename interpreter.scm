@@ -385,11 +385,13 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn type)
+    ;(display state) (newline) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ; if the key of the binding is a dot component
        ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state  type))) binding state)))
        ;if the variable is already declared, update the box
+       ((not (list? (key binding))) (M_state_Assignment_updateBinding-cps (list 'dot 'this (key binding)) state cpsreturn type))
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))) type)))))
 
@@ -493,9 +495,35 @@
 (define combine list)
 ;define a function that returns the closure of a given instance of a class
 ;instance closure: instance's class and a list of instance field values
+;(define instanceClosure
+;  (lambda (class state)
+;    (combine class (boxFields (getFields (lookupclass class state))))))
+
 (define instanceClosure
   (lambda (class state)
-    (combine class (boxFields (getFields (lookupclass class state))))))
+      (combine class (createFieldList class '() state))))
+
+(define createFieldList
+  (lambda (class fieldlist state)
+    (cond
+      ((not (hasSuperclass class state)) (addParentFields (boxFields (getFields (lookupclass class state))) fieldlist))
+      (else (createFieldList (getSuperclass class state) (addParentFields (boxFields (getFields (lookupclass class state))) fieldlist) state)))))
+
+; define a helper function that appends the parent class fields to the current class
+(define addParentFields
+  (lambda (parentlist childlist)
+    (display parentlist) (display "   ") (display childlist) (newline)
+    (cond
+      ((null? parentlist) childlist)
+      ((fieldNeeded (getFirst parentlist) childlist) (addParentFields (getAfterFirst parentlist) (cons (getFirst parentlist) childlist)))
+      (else addParentFields (getAfterFirst parentlist) childlist))))
+
+; define a function that determines if a parent field needs to be added to this class
+(define fieldNeeded
+  (lambda (parent fieldlis)
+    (cond 
+      ((assq parent fieldlis) #f)
+      (else #t))))
 
 ; define a function that boxes all the instance fields
 (define bind cons)
