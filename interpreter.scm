@@ -46,7 +46,6 @@
 ; defining a function that returns the value of an expression
 (define M_value
   (lambda (exp type state return whileReturn throwReturn breakReturn)
-    ;(display exp) (newline)
     (cond
       ((number? exp) exp)
       ((eq? exp '#t) 'true)
@@ -56,6 +55,7 @@
       ;((and (symbol? exp) (box? (lookupvar exp state type))) (unbox (lookupvar exp state type)))
       ((symbol? exp) (lookupvar exp state type))
       ((eq? (getFirst exp) 'new) (bind 'instance (instanceClosure (getSecond exp) state)))
+      ((and (eq? (getFirst exp) 'dot) (eq? (getInstance exp) 'this)) (lookupvar (getVar exp) (list (getFourth (getDotInstance (getInstance exp) state type))) type))
       ((eq? (getFirst exp) 'dot) (lookupvar (getVar exp) (list (getThird (getDotInstance (getInstance exp) state type))) type))
       ((and (null? (getAfterSecond exp)) (eq? (getFirst exp) '-)) (- 0 (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn)))
       ((eq? (getFirst exp) '+) (+ (M_value (getSecond exp) type state return whileReturn throwReturn breakReturn) (M_value (getThird exp) type state return whileReturn throwReturn breakReturn)))
@@ -182,7 +182,7 @@
 ; defining a function that returns the state after running a function
 (define M_state_funcall
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
-    (display funcallstat) (newline)
+    ;(display funcallstat) (newline)
     (cond
       ((null? (cdr state)) (run (getFourth (getSecond (lookupfunc (getSecond funcallstat) state type))) (getFirst (lookupfunc (getSecond funcallstat) state type)) (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (getSecond (lookupfunc (getSecond funcallstat) state type))) (getAfterSecond funcallstat) (addlayer '() state)) type) type) return whileReturn throwReturn breakReturn))
       ((null? (getAfterSecond funcallstat)) (run (getFourth (getSecond (lookupfunc (getSecond funcallstat) state type))) (getFirst (lookupfunc (getSecond funcallstat) state type)) (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (addlayer '() state)  type) type) return whileReturn throwReturn breakReturn))
@@ -195,7 +195,7 @@
       ((eq? name 'main) (list type (findfunc name (classFunctions type state))))
       ;((not (list? name)) (findfunc name (classFunctions type state)))
       ((and (list? name) (eq? (getSecond name) 'super)) (lookupfunc (getThird name) state (getSuperclass type state)))
-      ((and (list? name) (eq? (getSecond name) 'this)) (lookupfunc (getThird name) state (getThird (findvar 'this state))))
+      ((and (list? name) (eq? (getSecond name) 'this)) (lookupfunc (getThird name) state (getFourth (findvar 'this state))))
       ((and (list? name) (findfunc (getThird name) (classFunctions type state))) (list type  (findfunc (getThird name) (classFunctions type state))))
       ((and (not (list? name)) (findfunc name (classFunctions type state))) (list type (findfunc name (classFunctions type state))))
       ((hasSuperclass type state) (lookupfunc name state (getSuperclass type state)))
@@ -216,16 +216,28 @@
       ((assq 'function funclist) (findfunc name (getAfterFirst funclist)))
       (else #f)))) 
 
-(define getInstanceName getSecond)
+
 
 ; defining a function that binds this to the instance
 (define bindThis
   (lambda (name state type)
+    ;(display name) (newline)
     (cond
-      ((and (list? name) (findvar 'this state)) state)
-      ((and (list? name) (not (findvar 'this state))) (add (add (add 'this (getDotInstance (getSecond name) state type)) (topLayer state)) (getAfterFirst state)))
+      ((and (list? name) (not (findvar 'this state))) (add (add (add 'this (add (getSecond name) (getDotInstance (getSecond name) state type))) (topLayer state)) (getAfterFirst state)))
+      ((and (list? name) (needNewThis (getSecond name) state)) (add (add (add 'this (add (getSecond name) (getDotInstance (getSecond name) state type))) (topLayer state)) (getAfterFirst state)))
       (else state))))
 
+(define needNewThis
+  (lambda (newName state)
+    (cond
+      ((not (findvar 'this state)) #t)
+      ((eq? newName 'super) #f)
+      ((eq? newName 'this) #f)
+      ((eq? newName (getSecond (findvar 'this state))) #f)
+      ((not (eq? newName (getSecond (findvar 'this state)))) #t)
+      (else #f))))
+
+(define getInstanceName getSecond)
 ; defining a function that binds super to the instance
 (define bindSuper
   (lambda (name state type)
@@ -369,15 +381,14 @@
 (define key car)
 (define getInstanceName getSecond)
 (define getInstanceFieldName getThird)
-(define getFields getFourth)
+
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn type)
-    ;(display state) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ; if the key of the binding is a dot component
-       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFields (getDotInstance (getInstanceName (key binding)) state  type))) binding state)))
+       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state  type))) binding state)))
        ;if the variable is already declared, update the box
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))) type)))))
@@ -407,7 +418,6 @@
 
 (define getClassFields
   (lambda (type state)
-    ;(display (lookupvar 'this (topLayer state))) (newline)
       (getThird (lookupclass type state))))
 
 ; defining a function that adds a binding if the top layer does not contain it and return error if it is already declared in the top layer
@@ -422,7 +432,6 @@
 ; defining a function that finds the binding of the variable in state
 (define findvar-cps
   (lambda (var state cpsreturn)
-    ;(display state) (newline) (newline)
     (cond
        ((null? state) (cpsreturn #f))
        ((assq var (topLayer state)) (cpsreturn (assq var (topLayer state))))
@@ -448,7 +457,6 @@
 ;parent class, list of instance fields, list of methods/function names and closures
 (define classClosure
   (lambda (stmt state)
-    ;(display stmt) (newline)
     (list (getName stmt) (getSuperClass stmt) (parseFields (getBody stmt)) (parseFunctions (getBody stmt)))))
  
 ;define a function that parses the superclass
@@ -507,7 +515,6 @@
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
-    ;(display name) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
       ((assq name (topLayer state)) (assq name (topLayer state)))
