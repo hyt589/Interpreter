@@ -385,13 +385,13 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn type)
-    ;(display state) (newline) (newline)
+    (display binding) (newline) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ; if the key of the binding is a dot component
        ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state  type))) binding state)))
        ;if the variable is already declared, update the box
-       ((not (list? (key binding))) (M_state_Assignment_updateBinding-cps (list 'dot 'this (key binding)) state cpsreturn type))
+       ((not (list? (key binding))) (M_state_Assignment_updateBinding-cps (cons (list 'dot 'this (key binding)) (getAfterFirst binding)) state cpsreturn type))
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
        (else (M_state_Assignment_updateBinding-cps binding (getAfterFirst state) (lambda (v) (cpsreturn (cons (topLayer state) v))) type)))))
 
@@ -512,7 +512,7 @@
 ; define a helper function that appends the parent class fields to the current class
 (define addParentFields
   (lambda (parentlist childlist)
-    (display parentlist) (display "   ") (display childlist) (newline)
+    ;(display parentlist) (display "   ") (display childlist) (newline)
     (cond
       ((null? parentlist) childlist)
       ((fieldNeeded (getFirst parentlist) childlist) (addParentFields (getAfterFirst parentlist) (cons (getFirst parentlist) childlist)))
