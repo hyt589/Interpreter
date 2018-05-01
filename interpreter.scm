@@ -391,7 +391,7 @@
        ((null? state) (cpsreturn (error "Variable not declared")))
        ((and (list? (key binding)) (eq? (getInstanceName (key binding)) 'this)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state type))) binding state)))
        ; if the key of the binding is a dot component
-       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state type))) binding state)))
+       ((list? (key binding)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getThird (getDotInstance (getInstanceName (key binding)) state type))) binding state)))
        ;if the variable is already declared, update the box
        ((not (list? (key binding))) (M_state_Assignment_updateBinding-cps (cons (list 'dot 'this (key binding)) (getAfterFirst binding)) state cpsreturn type))
        ((assq (key binding) (topLayer state)) (cpsreturn (updateBox (assq (key binding) (topLayer state)) binding state)))
