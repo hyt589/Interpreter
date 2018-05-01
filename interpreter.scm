@@ -72,7 +72,7 @@
                            (or (eq? (getFirst exp) '!=)
                                (or (eq? (getFirst exp) '&&)
                                    (or (eq? (getFirst exp) '||)
-                                       (or (eq? (getFirst exp) '!)))))))))) (M_value (M_bool exp state return whileReturn throwReturn breakReturn) state))
+                                       (or (eq? (getFirst exp) '!)))))))))) (M_value (M_bool exp type state return whileReturn throwReturn breakReturn) state))
       (else (error "unknown operator")))))
 
 ; define a function that takes the instance component of a dot statement and return the instance closure
@@ -182,7 +182,7 @@
 ; defining a function that returns the state after running a function
 (define M_state_funcall
   (lambda (funcallstat type state return whileReturn throwReturn breakReturn)
-    ;(display funcallstat) (newline)
+    (display funcallstat) (newline)
     (cond
       ((and (not (list? (getSecond funcallstat))) (not (eq? (getSecond funcallstat) 'main))) (M_state_funcall (list (getFirst funcallstat) (list 'dot 'this (getSecond funcallstat))) type state return whileReturn throwReturn breakReturn))
       ((null? (cdr state)) (run (getFourth (getSecond (lookupfunc (getSecond funcallstat) state type))) (getFirst (lookupfunc (getSecond funcallstat) state type)) (bindSuper (getSecond funcallstat) (bindThis (getSecond funcallstat) (createFuncLayer (getThird (getSecond (lookupfunc (getSecond funcallstat) state type))) (getAfterSecond funcallstat) (addlayer '() state)) type) type) return whileReturn throwReturn breakReturn))
@@ -386,7 +386,7 @@
 ; defining a function that updates the bindings in a given state in a assignment statement
 (define M_state_Assignment_updateBinding-cps
   (lambda (binding state cpsreturn type)
-    ;(display binding) (newline) (newline)
+    (display state) (newline) (newline)
     (cond
        ((null? state) (cpsreturn (error "Variable not declared")))
        ((and (list? (key binding)) (eq? (getInstanceName (key binding)) 'this)) (cpsreturn (updateBox (assq (getInstanceFieldName (key binding)) (getFourth (getDotInstance (getInstanceName (key binding)) state type))) binding state)))
@@ -409,17 +409,32 @@
     (M_state_Assignment_updateBinding-cps binding state (lambda(v) v) type)))
 
 ; defining a function that returns a value of a variable if initialized or an error message if not
+
+
+
+(define lookupvar2
+  (lambda (var state type)
+    ;(display var) (display " -- ")  (display state) (newline) (newline)
+    (cond
+      ((and (eq? (findvar var (list (getFirst (cddddr (findvar 'this state))))) (findvar var (list (getSecond (instanceClosure type state)))))
+              (box? (getAfterFirst (findvar var (list (getSecond (instanceClosure type state))))))) (unbox (getAfterFirst (findvar var (list (getFirst (cddddr (findvar 'this state))))))))
+      ((eq? (findvar var (list (getFirst (cddddr (findvar 'this state))))) (findvar var (list (getSecond (instanceClosure type state))))) (getAfterFirst (findvar var (list (getFirst (cddddr (findvar 'this state)))))))
+      ((and (findvar var (list (getSecond (instanceClosure type state)))) (box? (getAfterFirst (findvar var (list (getSecond (instanceClosure type state)))))))
+       (unbox (getAfterFirst (findvar var (list (getSecond (instanceClosure type state)))))))
+      ((findvar var (list (getSecond (instanceClosure type state)))) (getAfterFirst (findvar var (list (getSecond (instanceClosure type state))))))
+      (else (error "Variable not declared")))))
+
 (define lookupvar
   (lambda (var state type)
-    (display var) (display " -- ")  (display state) (newline) (newline)
+    ;(display var) (display " -- ")  (display state) (newline) (newline)
     (cond
       ((and (findvar var state) (box? (getAfterFirst (findvar var state)))) (unbox (getAfterFirst (findvar var state))))
       ((findvar var state) (getAfterFirst (findvar var state)))
-      ((and (findvar var (list (getClassFields type state))) (getAfterFirst (findvar var (list (getClassFields type state))))))
-      ((hasSuperclass type state) (lookupvar var state (getSuperclass type state)))
-      ((error "Variable not declared!")))))
-
-
+      ((not (findvar var state)) (lookupvar2 var state type))
+      ;((and (findvar var (list (getClassFields type state))) (getAfterFirst (findvar var (list (getClassFields type state))))))
+      ;((hasSuperclass type state) (lookupvar var state (getSuperclass type state)))
+      (else (error "Variable not declared!")))))
+       
 (define getClassFields
   (lambda (type state)
       (getThird (lookupclass type state))))
@@ -517,7 +532,7 @@
     ;(display parentlist) (display "   ") (display childlist) (newline)
     (cond
       ((null? parentlist) childlist)
-      ((fieldNeeded (getFirst parentlist) childlist) (addParentFields (getAfterFirst parentlist) (cons (getFirst parentlist) childlist)))
+      ((fieldNeeded (getFirst (getFirst parentlist)) childlist) (addParentFields (getAfterFirst parentlist) (cons (getFirst parentlist) childlist)))
       (else addParentFields (getAfterFirst parentlist) childlist))))
 
 ; define a function that determines if a parent field needs to be added to this class
@@ -545,6 +560,7 @@
 ; defining a function that lookup a class and return the class closure
 (define lookupclass
   (lambda (name state)
+    (display name) (newline)
     (cond
       ((null? state) (error "Class not defined!"))
       ((assq name (topLayer state)) (assq name (topLayer state)))
